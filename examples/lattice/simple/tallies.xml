@@ -1,0 +1,16 @@
+<?xml version='1.0' encoding='utf-8'?>
+<tallies>
+  <mesh id="1">
+    <dimension>4 4</dimension>
+    <lower_left>-2 -2</lower_left>
+    <width>1 1</width>
+  </mesh>
+  <filter id="1" type="mesh">
+    <bins>1</bins>
+  </filter>
+  <tally id="1">
+    <filters>1</filters>
+    <scores>total</scores>
+    <trigger scores="all" threshold="0.01" type="rel_err" />
+  </tally>
+</tallies>

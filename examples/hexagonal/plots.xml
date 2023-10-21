@@ -1,0 +1,27 @@
+<?xml version='1.0' encoding='utf-8'?>
+<plots>
+  <plot basis="xy" color_by="material" filename="plot_xy" id="1" type="slice">
+    <origin>0 0 0</origin>
+    <width>6 6</width>
+    <pixels>400 400</pixels>
+  </plot>
+  <plot basis="yz" color_by="material" filename="plot_yz" id="2" type="slice">
+    <origin>0 0 0</origin>
+    <width>8 8</width>
+    <pixels>400 400</pixels>
+  </plot>
+
+  <plot basis="yz" color_by="material"  id="3" type="slice">
+    <origin>0 0 2</origin>
+    <width>8 8</width>
+    <pixels>400 400</pixels>
+  </plot>
+
+<plot id="4"  type="voxel" color_by="material" > 
+    
+    <origin> 0. 0. 0.  </origin> 
+    <pixels> 300 300 10  </pixels>
+    <width> 6 6 6   </width>   
+</plot>
+
+</plots>

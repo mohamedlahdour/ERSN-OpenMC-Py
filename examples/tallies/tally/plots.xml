@@ -1,0 +1,33 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<plots>
+  <plot basis="xy" color_by="material" filename="_plot1" id="1" type="slice">
+    <pixels>400 400</pixels>
+    <origin>0 0 0</origin>
+    <width>6 6</width>
+  </plot>
+  <plot basis="yz" color_by="material" filename="_plot2" id="2" type="slice">
+    <pixels>4000 4000</pixels>
+    <origin>0 0 0</origin>
+    <width>8 8</width>
+  </plot>
+  <plot basis="xy" color_by="material" filename="xy_plot3" id="3" type="slice">
+    <pixels>1000 1000</pixels>
+    <origin>0 0 0</origin>
+    <width>10 10</width>
+  </plot>
+  <plot basis="xz" color_by="cell" filename="_plot4" id="4" type="slice">
+    <pixels>1000 1000</pixels>
+    <origin>0 0 0</origin>
+    <width>10 10</width>
+  </plot>
+  <plot color_by="material" filename="_plot5" id="5" type="voxel">
+    <pixels>120 120 240</pixels>
+    <origin>0 0 0</origin>
+    <width>12 12 24</width>
+  </plot>
+  <plot color_by="material" filename="_plot6" id="6" type="voxel">
+    <pixels>60 60 60</pixels>
+    <origin>0 0 0</origin>
+    <width>65 85 90</width>
+  </plot>
+</plots>

@@ -1,0 +1,69 @@
+<?xml version='1.0' encoding='utf-8'?>
+<tallies>
+  <mesh id="1">
+    <dimension>36 36 36</dimension>
+    <lower_left>-5.12992 -5.12992 -5</lower_left>
+    <upper_right>5.12992 5.12992 5</upper_right>
+  </mesh>
+  <mesh id="4">
+    <dimension>30 30 15</dimension>
+    <lower_left>-10.1 -10.1 -5.0</lower_left>
+    <upper_right>10.1 10.1 5.0</upper_right>
+  </mesh>
+  <mesh id="3">
+    <dimension>60 60</dimension>
+    <lower_left>-10.1 -10.1</lower_left>
+    <upper_right>10.1 10.1</upper_right>
+  </mesh>
+  <filter id="1" type="mesh">
+    <bins>1</bins>
+  </filter>
+  <filter id="4" type="cell">
+    <bins>1 2 3 4</bins>
+  </filter>
+  <filter id="7" type="mesh">
+    <bins>4</bins>
+  </filter>
+  <filter id="3" type="energy">
+    <bins>1e-05 0.625 20000000.0</bins>
+  </filter>
+  <filter id="6" type="mesh">
+    <bins>3</bins>
+  </filter>
+  <tally id="1" name="RR5">
+    <filters>1</filters>
+    <scores>absorption fission flux</scores>
+  </tally>
+  <tally id="2" name="RR5">
+    <filters>1</filters>
+    <nuclides>Fe57 U235 Zr90</nuclides>
+    <scores>absorption fission elastic</scores>
+  </tally>
+  <tally id="5" name="RR5">
+    <filters>1 4</filters>
+    <nuclides>Fe57 Fe54 Zr90</nuclides>
+    <scores>absorption fission</scores>
+  </tally>
+  <tally id="7" name="mesh_energy">
+    <filters>7 3</filters>
+    <nuclides>U235 Zr90</nuclides>
+    <scores>absorption elastic fission total</scores>
+  </tally>
+  <tally id="8" name="mesh_nuclides">
+    <filters>7</filters>
+    <nuclides>U235 Zr90 B10</nuclides>
+    <scores>absorption elastic (n,gamma) total</scores>
+  </tally>
+  <tally id="9" name="mesh_energy_nuclides">
+    <filters>6 3</filters>
+    <scores>absorption elastic (n,gamma) total</scores>
+  </tally>
+  <tally id="10" name="mesh 2D">
+    <filters>6</filters>
+    <scores>absorption elastic (n,gamma) total</scores>
+  </tally>
+  <tally id="3" name="Mesh tally">
+    <filters>1</filters>
+    <scores>flux fission nu-fission</scores>
+  </tally>
+</tallies>

@@ -1,0 +1,138 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<tallies>
+  <!--mesh-->
+  <mesh id="1">
+    <dimension>6 8</dimension>
+    <lower_left>-29.0 -41.0</lower_left>
+    <upper_right>29.0 41.0</upper_right>
+  </mesh>
+  <mesh id="3">
+    <dimension>16 16 5</dimension>
+    <lower_left>-29.0 -41.0 -3.0</lower_left>
+    <upper_right>29.0 41.0 3.0</upper_right>
+  </mesh>
+  <filter id="3" type="cell">
+    <bins>1 2 3 4 5 6</bins>
+  </filter>
+  <filter id="2" type="energy">
+    <bins>0.0001 0.001 0.01 0.1 1.0 10.0</bins>
+  </filter>
+  <filter id="1" type="energy">
+    <bins>1e-05 0.001 0.1 1.0 2.0 4.0 6.0 8.0 10.0 100.0 1000.0 10000.0 100000.0 1000000.0 2000000.0</bins>
+  </filter>
+  <filter id="4" type="mesh">
+    <bins>1</bins>
+  </filter>
+  <filter id="6" type="surface">
+    <bins>3 5 1 2 4 6</bins>
+  </filter>
+  <filter id="7" type="mesh">
+    <bins>1</bins>
+  </filter>
+  <filter id="8" type="surface">
+    <bins>3 5 1 2 4</bins>
+  </filter>
+  <filter id="9" type="mu">
+    <bins>-1.0 -0.5 0.0 0.5 1.0</bins>
+  </filter>
+  <filter id="10" type="mesh">
+    <bins>3</bins>
+  </filter>
+  <tally id="1" name="RR1">
+    <scores>total</scores>
+  </tally>
+  <tally id="2" name="RR2">
+    <nuclides>U235 H2 Al27 Fe56</nuclides>
+    <scores>elastic absorption (n,gamma) total</scores>
+  </tally>
+  <tally id="3" name="RR3">
+    <filters>3</filters>
+    <scores>flux absorption elastic scatter (n,p)</scores>
+  </tally>
+  <tally id="4" name="RR4">
+    <filters>2</filters>
+    <scores>flux total absorption</scores>
+  </tally>
+  <tally id="5" name="RR5">
+    <filters>3 2</filters>
+    <scores>flux absorption elastic total (n,gamma)</scores>
+  </tally>
+  <tally id="6" name="RR6">
+    <filters>1</filters>
+    <nuclides>U235 H1 B10 Al27 Fe56</nuclides>
+    <scores>(n,gamma) absorption total</scores>
+  </tally>
+  <tally id="7" name="mesh">
+    <filters>4 1</filters>
+    <scores>flux absorption elastic (n,gamma)</scores>
+  </tally>
+  <tally id="8" name="current1">
+    <filters>6</filters>
+    <scores>current</scores>
+  </tally>
+  <tally id="9" name="flux">
+    <filters>1 7</filters>
+    <scores>flux</scores>
+  </tally>
+  <tally id="10" name="RR10">
+    <filters>2 3</filters>
+    <scores>flux absorption elastic total (n,gamma)</scores>
+  </tally>
+  <tally id="11" name="RR11">
+    <nuclides>U235 H2 Al27 total</nuclides>
+    <scores>elastic absorption (n,gamma) total</scores>
+  </tally>
+  <tally id="12" name="RR12">
+    <filters>3</filters>
+    <nuclides>U235 H2 Al27 Fe56</nuclides>
+    <scores>elastic absorption (n,gamma) total</scores>
+  </tally>
+  <tally id="13" name="RR13">
+    <nuclides>U235 H2 Al27 Fe56 total</nuclides>
+    <scores>elastic absorption (n,gamma) total</scores>
+  </tally>
+  <tally id="14" name="RR14">
+    <filters>3</filters>
+    <nuclides>U235 H2 Al27 Fe56 total</nuclides>
+    <scores>elastic absorption (n,gamma) total</scores>
+  </tally>
+  <tally id="15" name="RR15">
+    <filters>3</filters>
+    <nuclides>U235 H2 Al27 Fe56 total</nuclides>
+    <scores>elastic absorption (n,gamma) (n,p) scatter total</scores>
+  </tally>
+  <tally id="18" name="Flux Current">
+    <filters>8 2</filters>
+    <scores>current</scores>
+  </tally>
+  <tally id="19" name="Mesh by Nuclide">
+    <filters>4</filters>
+    <nuclides>Al27 Fe56 U235 U238</nuclides>
+    <scores>absorption elastic total</scores>
+  </tally>
+  <tally id="20" name="Cosine">
+    <filters>8 9</filters>
+    <scores>current</scores>
+  </tally>
+  <tally id="21" name="Cosine and energy">
+    <filters>2 8 9</filters>
+    <scores>current</scores>
+  </tally>
+  <tally id="22" name="mesh only">
+    <filters>4</filters>
+    <scores>flux absorption elastic total</scores>
+  </tally>
+  <tally id="23" name="mesh 3D">
+    <filters>10</filters>
+    <scores>flux total</scores>
+  </tally>
+  <tally id="24" name="mu tally">
+    <filters>9</filters>
+    <scores>flux</scores>
+  </tally>
+  <tally id="25" name="mu scatter">
+    <filters>9</filters>
+    <nuclides>U235 U238</nuclides>
+    <scores>scatter fission</scores>
+  </tally>
+</tallies>

@@ -1,0 +1,45 @@
+<?xml version='1.0' encoding='utf-8'?>
+<materials>
+  <material depletable="true" id="1" name="fuel" temperature="293.6">
+    <density units="g/cc" value="4.5"/>
+    <nuclide name="U234" wo="0.0001335"/>
+    <nuclide name="U235" wo="0.015"/>
+    <nuclide name="U238" wo="0.4847975"/>
+    <nuclide name="U236" wo="6.9e-05"/>
+    <nuclide name="Fe54" wo="0.005645558222706856"/>
+    <nuclide name="Fe56" wo="0.09190152877956247"/>
+    <nuclide name="Fe57" wo="0.0021603686136746365"/>
+    <nuclide name="Fe58" wo="0.00029254438405605887"/>
+    <nuclide name="Al27" wo="0.1"/>
+    <nuclide name="B10" wo="0.01835549587507326"/>
+    <nuclide name="B11" wo="0.08164450412492674"/>
+    <nuclide name="H1" wo="0.09996888076484955"/>
+    <nuclide name="H2" wo="3.1119235150456444e-05"/>
+    <nuclide name="S32" wo="0.09476861080827587"/>
+    <nuclide name="S33" wo="0.0007698819377540354"/>
+    <nuclide name="S34" wo="0.004445152400876023"/>
+    <nuclide name="S36" wo="1.6354853094087034e-05"/>
+  </material>
+  <material id="2" name="moderator" temperature="293.6">
+    <density units="g/cc" value="1.0"/>
+    <nuclide ao="1.99968852" name="H1"/>
+    <nuclide ao="0.00031148" name="H2"/>
+    <nuclide ao="0.79809648" name="O16"/>
+    <nuclide ao="0.0003032" name="O17"/>
+    <nuclide ao="0.00160032" name="O18"/>
+    <nuclide ao="0.1" name="Al27"/>
+    <nuclide ao="0.005845" name="Fe54"/>
+    <nuclide ao="0.091754" name="Fe56"/>
+    <nuclide ao="0.0021190000000000002" name="Fe57"/>
+    <nuclide ao="0.000282" name="Fe58"/>
+    <sab name="c_H_in_H2O"/>
+  </material>
+  <material id="3" name="iron" temperature="293.6">
+    <density units="g/cc" value="7.9"/>
+    <nuclide ao="0.3" name="Al27"/>
+    <nuclide ao="0.05945999999999999" name="B10"/>
+    <nuclide ao="0.24053999999999998" name="B11"/>
+    <nuclide ao="0.24299128201629017" name="Cu63"/>
+    <nuclide ao="0.15700871798370986" name="Cu65"/>
+  </material>
+</materials>

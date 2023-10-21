@@ -1,0 +1,13 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<settings>
+  <run_mode>fixed source</run_mode>
+  <particles>1000000</particles>
+  <batches>10</batches>
+  <source particle="neutron" strength="1.0" type="independent">
+    <space type="box">
+      <parameters>-1 -1 -1 1 1 1</parameters>
+    </space>
+    <angle type="isotropic"/>
+    <energy parameters="2 1" type="watt"/>
+  </source>
+</settings>

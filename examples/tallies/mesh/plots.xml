@@ -1,0 +1,13 @@
+<?xml version='1.0' encoding='utf-8'?>
+<plots>
+  <plot basis="xy" color_by="material" filename="_plot1" id="1" type="slice">
+    <origin>0 0 0</origin>
+    <width>12 12</width>
+    <pixels>500 500</pixels>
+  </plot>
+  <plot color_by="material" filename="_plot2" id="2" type="voxel">
+    <origin>0 0 0</origin>
+    <width>12 12 12</width>
+    <pixels>100 100 100</pixels>
+  </plot>
+</plots>
