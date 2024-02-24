@@ -29,7 +29,7 @@
       </size>
      </property>
      <property name="currentIndex">
-      <number>1</number>
+      <number>0</number>
      </property>
      <widget class="QWidget" name="tab">
       <attribute name="title">
@@ -684,7 +684,7 @@
              </widget>
             </item>
             <item row="5" column="3">
-             <widget class="QRadioButton" name="tel_RB">
+             <widget class="QRadioButton" name="led_RB">
               <property name="enabled">
                <bool>false</bool>
               </property>
@@ -2637,7 +2637,7 @@
   <tabstop>Photon_CB</tabstop>
   <tabstop>Photon_Cut</tabstop>
   <tabstop>ttb_RB</tabstop>
-  <tabstop>tel_RB</tabstop>
+  <tabstop>led_RB</tabstop>
   <tabstop>Add_Run_Mode_PB</tabstop>
   <tabstop>Add_Vol_Calc_PB</tabstop>
   <tabstop>Entropy_type_CB</tabstop>

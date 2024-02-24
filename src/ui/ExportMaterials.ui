@@ -259,12 +259,12 @@
                  </property>
                  <item>
                   <property name="text">
-                   <string>ao</string>
+                   <string>wo</string>
                   </property>
                  </item>
                  <item>
                   <property name="text">
-                   <string>wo</string>
+                   <string>ao</string>
                   </property>
                  </item>
                 </widget>
@@ -362,12 +362,12 @@
                 <widget class="QComboBox" name="comboBox_8">
                  <item>
                   <property name="text">
-                   <string>ao</string>
+                   <string>wo</string>
                   </property>
                  </item>
                  <item>
                   <property name="text">
-                   <string>wo</string>
+                   <string>ao</string>
                   </property>
                  </item>
                 </widget>
@@ -1717,12 +1717,12 @@
                  </property>
                  <item>
                   <property name="text">
-                   <string>ao</string>
+                   <string>wo</string>
                   </property>
                  </item>
                  <item>
                   <property name="text">
-                   <string>wo</string>
+                   <string>ao</string>
                   </property>
                  </item>
                 </widget>
@@ -1807,12 +1807,12 @@
                 <widget class="QComboBox" name="Enrichment_Type_CB">
                  <item>
                   <property name="text">
-                   <string>ao</string>
+                   <string>wo</string>
                   </property>
                  </item>
                  <item>
                   <property name="text">
-                   <string>wo</string>
+                   <string>ao</string>
                   </property>
                  </item>
                 </widget>
@@ -2175,7 +2175,7 @@
         </property>
         <layout class="QGridLayout" name="gridLayout_26">
          <item row="0" column="0">
-          <layout class="QGridLayout" name="EditorLayout_1"/>
+          <layout class="QGridLayout" name="EditorLayout"/>
          </item>
          <item row="1" column="0">
           <layout class="QVBoxLayout" name="verticalLayout_3">

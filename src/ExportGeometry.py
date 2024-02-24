@@ -2,105 +2,81 @@
 # -*- coding: utf-8 -*-
 import sys
 import os
+import re
+import string
+from functools import partial
+from PyQt5 import QtCore, QtGui, QtWidgets
+from PyQt5 import uic
 from PyQt5.QtCore import *
 from PyQt5.QtWidgets import *
 from PyQt5.QtGui import *
-from PyQt5 import uic
-from PyQt5 import QtCore, QtGui, QtWidgets
-from src.XMLHighlighter import XMLHighlighter
-import re
-from PyQt5.QtWidgets import QMainWindow, QLabel
-from PyQt5.QtWidgets import QGridLayout, QWidget, QDesktopWidget
 from src.ExportMaterials import ExportMaterials
-from functools import partial
-from src.PyEdit import myEditor # added
+from src.PyEdit import TextEdit, NumberBar  
 from src.syntax_py import Highlighter
-
-class EmittingStream(QtCore.QObject):
-    textWritten = QtCore.pyqtSignal(str)
-
-    def write(self, text):
-        self.textWritten.emit(str(text))
-        pass
-
-    def flush(self):
-        pass
+from src.XMLHighlighter import XMLHighlighter
 
 class ExportGeometry(QWidget):
     from .func import resize_ui, showDialog, Exit
     def __init__(self, v_1, regions, surf, surf_id, cell, cell_id, mat, mat_id, univ, univ_id, C_in_U, lat, lat_id, parent=None):
         super(ExportGeometry, self).__init__(parent)
-        #sys.stdout = EmittingStream(textWritten=self.normalOutputWritten)
-        #sys.stderr = EmittingStream(textWritten=self.normalOutputWritten)
         uic.loadUi("src/ui/ExportGeometry.ui", self)
-        self.lineEdit_18.setValidator(QIntValidator())
-        self.validator = QDoubleValidator(self)
-        self.comboBox_6.show()
-        self.Modify_TextEdit_PB.hide()
-        for LE in [self.lineEdit_19, self.lineEdit_20, self.lineEdit_21, self.lineEdit_22, self.lineEdit_23, self.lineEdit_24]:
-            LE.setValidator(self.validator)
-        self.v_1 = v_1
-        self._initButtons()
-        self.regions = regions
-        self.cells = []
-        self.universes = []
+        try:
+            from openmc import __version__
+            self.openmc_version = int(__version__.split('-')[0].replace('.', ''))
+        except:
+            self.showDialog('Warning', 'OpenMC not yet installed !')
+            self.openmc_version = 0
+ 
+        # add new editor
+        self.plainTextEdit = TextEdit()
+        self.plainTextEdit.setWordWrapMode(QTextOption.NoWrap)
+        self.numbers = NumberBar(self.plainTextEdit)
+        layoutH = QHBoxLayout()
+        #layoutH.setSpacing(1.5)
+        layoutH.addWidget(self.numbers)
+        layoutH.addWidget(self.plainTextEdit)
+        self.EditorLayout.addLayout(layoutH, 0, 0)
+        # 
+        sys.stdout = EmittingStream(textWritten=self.normalOutputWritten)
+        #sys.stderr = EmittingStream(textWritten=self.normalOutputWritten)
+        self._initButtons() 
+        self.v_1 = v_1        
         self.materials_name_list = mat
         self.materials_id_list = mat_id
-        self.surface_name_sub_list = []
-        self.surface_id_sub_list = []
         self.surface_name_list = surf
         self.surface_id_list = surf_id
-        self.cells_in_universes = C_in_U
-        if surf_id:
-            n = surf_id[-1]
-        else:
-            n = 0
-        self.surface_id = int(n) + 1
-        self.surface_suffix = 'Surf'
-        self.cell_name_sub_list = []
-        self.cell_id_sub_list = []
         self.cell_name_list = cell
         self.cell_id_list = cell_id
-        if cell_id:
-            n = cell_id[-1]
-        else:
-            n = 0
-        self.cell_id = int(n) + 1
-        self.cell_suffix = 'Cell'
+        self.regions = regions
+        self.cells_in_universes = C_in_U
         self.universe_name_list = univ
-        self.universe_name_sub_list = []
         self.universe_id_list = univ_id
-        self.universe_id_sub_list = []
-        self.universe_suffix = 'Univ'
         self.lattice_name_list = lat
         self.lattice_id_list = lat_id
-        if univ_id:
-            n = int(univ_id[-1]) + 1
-            while True:
-                if str(n) not in self.lattice_id_list:
-                    self.universe_id = n
-                    break
-                else:
-                    n += 1
-        else:
-            self.universe_id = 1
+        #
+        self.Instanciate_Lists()
+        self.Surfaces_List = ['openmc.Plane', 'openmc.XPlane', 'openmc.YPlane', 'openmc.ZPlane', 'openmc.Sphere', 'openmc.XCylinder', 
+                                'openmc.YCylinder', 'openmc.ZCylinder', 'openmc.Cone', 'openmc.XCone', 'openmc.YCone', 'openmc.ZCone',
+                                'openmc.Quadric', 'openmc.XTorus', 'openmc.YTorus', 'openmc.ZTorus', 'rectangular_prism', 'hexagonal_prism']
+        if self.openmc_version >= 141:
+            self.Surfaces_List[-2] = 'model.RectangularPrism'
+            self.Surfaces_List[-1] = 'model.HexagonalPrism'
 
-        if lat_id:
-            n = int(lat_id[-1]) + 1
-            while True:
-                if str(n) not in univ_id:
-                    self.lattice_id = n
-                    break
-                else:
-                    n += 1
-        else:
-            if univ_id:
-                self.lattice_id = int(univ_id[-1]) + 1
-            else:
-                self.lattice_id = 1
-        self.lattice_suffix = 'Lat'
-        self.Fill_ComboBox.addItems(["Select element", "None"])
+        self.comboBox.addItem('Select Surface Type')
+        self.comboBox.addItems(self.Surfaces_List)
+        self.comboBox.setItemData(17,"The rectangonal_prism(...) function has been replaced by the RectangularPrism(...) class "
+                                             "in version 0.14.1 of OpenMC.", QtCore.Qt.ToolTipRole)
+        self.comboBox.setItemData(18,"The hexagonal_prism(...) function has been replaced by the HexagonalPrism(...) class "
+                                             "in version 0.14.1 of OpenMC.", QtCore.Qt.ToolTipRole)
+        # to show window at the middle of the screen
+        self.resize_ui()
 
+    def Instanciate_Lists(self):
+        self.lineEdit_18.setValidator(QIntValidator())
+        self.validator = QDoubleValidator(self)
+
+        for LE in [self.lineEdit_19, self.lineEdit_20, self.lineEdit_21, self.lineEdit_22, self.lineEdit_23, self.lineEdit_24]:
+            LE.setValidator(self.validator)
         self.Liste = [self.lineEdit, self.lineEdit_2, self.lineEdit_3, self.lineEdit_4, self.lineEdit_5,
                       self.lineEdit_6, self.lineEdit_7, self.lineEdit_8, self.lineEdit_9, self.lineEdit_10]
         self.Liste1 = [self.label, self.label_2, self.label_3, self.label_4, self.label_5,
@@ -115,18 +91,78 @@ class ExportGeometry(QWidget):
         self.lineEdit_15.setValidator(QIntValidator())
         for item in [self.lineEdit_19, self.lineEdit_24, self.spinBox_3, self.label_21, self.label_26]:
             item.setEnabled(False)
+        self.comboBox_6.show()
+        self.Modify_TextEdit_PB.hide()        
         self.spinBox.setValue(1)
         self.spinBox_2.setValue(1)
         self.spinBox_3.setValue(1)
         self.text_inserted = False
         self.modify_universes = False
+
+        self.surface_name_sub_list = []
+        self.surface_id_sub_list = []
+        self.cells = []
+        self.universes = []
+        self.cell_name_sub_list = []
+        self.cell_id_sub_list = []
+        self.universe_name_sub_list = []
+        self.universe_id_sub_list = []
+
+        self.surface_suffix = 'Surf'
+        self.cell_suffix = 'Cell'
+        self.universe_suffix = 'Univ'
+        self.lattice_suffix = 'Lat'
+        # Surface id
+        if self.surface_id_list:
+            n = self.surface_id_list[-1]
+        else:
+            n = 0
+        self.surface_id = int(n) + 1  
+        # Cell id      
+        if self.cell_id_list:
+            n = self.cell_id_list[-1]
+        else:
+            n = 0
+        self.cell_id = int(n) + 1
+        # Universe id
+        if len(self.universe_id_list) > 0:
+            n = int(self.universe_id_list[-1]) + 1
+            while True:
+                if str(n) not in self.universe_id_list and str(n) not in self.lattice_id_list :
+                    self.universe_id = n
+                    break
+                else:
+                    n += 1
+        else:
+            self.universe_id = 1
+        # Lattice id
+        if len(self.lattice_id_list) > 0:
+            n = int(self.lattice_id_list[-1]) + 1
+            while True:
+                if str(n) not in self.lattice_id_list and str(n) not in self.universe_id_list:
+                    self.lattice_id = n
+                    break
+                else:
+                    n += 1
+        else:
+            if len(self.universe_id_list) > 0:
+                n = int(self.universe_id_list[-1]) + 1
+                while True:
+                    if str(n) not in self.universe_id_list:
+                        self.lattice_id = n
+                        break
+                    else:
+                        n += 1
+            else:
+                self.lattice_id = 1
+        self.Fill_ComboBox.addItems(["Select element", "None"])
         self.lineEdit_12.setText(str(self.surface_id))
         if self.comboBox_3.currentIndex() == 1:
             self.lineEdit_14.setText(str(self.cell_id))
         elif self.comboBox_3.currentIndex() == 2:
             self.lineEdit_15.setText(str(self.universe_id))
         self.lineEdit_18.setText(str(self.lattice_id))
-        self.lineEdit_17.setText(str(self.lattice_suffix))
+        #self.lineEdit_17.setText(str(self.lattice_suffix))
         self.Fill_ComboBox.addItems(self.materials_name_list)
         self.Fill_ComboBox.addItems(self.universe_name_list)
         self.Fill_ComboBox.addItems(self.lattice_name_list)
@@ -140,40 +176,17 @@ class ExportGeometry(QWidget):
         else:
             self.lineEdit_11.setText(self.surface_suffix)
 
-        if self.comboBox_3.currentIndex() == 1:
-            self.comboBox_5.addItems(sorted(self.regions))
-            if self.add_id_CB.isChecked():
-                self.lineEdit_13.setText(self.cell_suffix + str(self.lineEdit_14.text()))
-            else:
-                self.lineEdit_13.setText(self.cell_suffix)
-        elif self.comboBox_3.currentIndex() == 2:
-            if self.add_id_CB.isChecked():
-                self.lineEdit_13.setText(self.universe_suffix + str(self.lineEdit_15.text()))
-            else:
-                self.lineEdit_13.setText(self.universe_suffix)
-        if self.add_id_lat_CB.isChecked():
-            self.lineEdit_17.setText(self.lattice_suffix + str(self.lineEdit_18.text()))
-        else:
-            self.lineEdit_17.setText(self.lattice_suffix)
+        self.Univ_Lat_LE_Update()  
+
         for item in [self.Translation_CB, self.Rotation_CB, self.XX_LE, self.YY_LE, self.ZZ_LE, self.Theta_LE,
                      self.Phi_LE, self.Psi_LE]:
             item.setEnabled(False)
         for item in [self.lineEdit_19, self.lineEdit_24, self.spinBox_3, self.label_21, self.label_26]:
             item.setDisabled(True)
 
-        # add new editor
-        self.win = myEditor()
-        self.EditorLayout.addWidget(self.win)
-        self.cursor = self.win.editor.textCursor()
-        self.plainTextEdit = self.win.editor
-        sys.stdout = EmittingStream(textWritten=self.normalOutputWritten)
-        #sys.stderr = EmittingStream(textWritten=self.normalOutputWritten)
-        # to show window at the middle of the screen
-        self.resize_ui()
-
     def _initButtons(self):
         self.comboBox.currentIndexChanged.connect(self.Def_Surf)
-        self.comboBox_3.currentIndexChanged.connect(self.Def_Cell)
+        self.comboBox_3.currentIndexChanged.connect(self.Def_Cell_Univ)
         self.comboBox_3.currentIndexChanged.connect(self.activate_widgets)
         self.Fill_ComboBox.currentIndexChanged.connect(self.activate_widgets)
         self.comboBox_4.currentIndexChanged.connect(self.Def_Lattice)
@@ -181,20 +194,21 @@ class ExportGeometry(QWidget):
         self.pushButton_7.clicked.connect(self.Def_Matrix)
         self.comboBox_6.currentIndexChanged.connect(self.Pick_Universe)
         #self.comboBox_7.currentIndexChanged.connect(self.Pick_Universe)
-        self.geomWidget.currentChanged.connect(self.Update_univ_list)
+        self.geomWidget.currentChanged.connect(self.Update_univ_CB_list)
+        self.geomWidget.currentChanged.connect(self.Univ_Lat_LE_Update)
         self.Add_Surf_PB.clicked.connect(self.Add_Surface)
-        self.Add_Cell_Univ_PB.clicked.connect(self.Add_Cell)
-        self.pushButton_6.clicked.connect(self.Add_Lattice)
+        self.Add_Cell_Univ_PB.clicked.connect(self.Add_Cell_Univ)
+        self.Add_Lat_PB.clicked.connect(self.Add_Lattice)
         self.lineEdit_11.textChanged.connect(self.sync_surface_name1)
         self.lineEdit_12.textChanged.connect(self.sync_surface_id)
         self.add_surf_id_CB.stateChanged.connect(self.sync_surface_name)
+        self.add_id_CB.stateChanged.connect(self.sync_name)
+        self.add_id_lat_CB.stateChanged.connect(self.sync_name)        
         self.lineEdit_13.textChanged.connect(self.sync_name1)
         self.lineEdit_14.textChanged.connect(self.sync_id)
         self.lineEdit_15.textChanged.connect(self.sync_id)
         self.lineEdit_17.textChanged.connect(self.sync_name1)
         self.lineEdit_18.textChanged.connect(self.sync_id)
-        self.add_id_CB.stateChanged.connect(self.sync_name)
-        self.add_id_lat_CB.stateChanged.connect(self.sync_name)
         self.Export_PB.clicked.connect(self.Export_to_Main_Window)
         self.Reset_Fields_PB.clicked.connect(self.Reset_Fields)
         self.pushButton_3.clicked.connect(self.Clear_Output)
@@ -204,6 +218,26 @@ class ExportGeometry(QWidget):
         self.RB_3D.toggled.connect(lambda: self.spinBox_3.setValue(2))
         self.RB_2D.toggled.connect(lambda: self.spinBox_3.setValue(1))
         self.Modify_TextEdit_PB.clicked.connect(self.modify_textedit)
+        self.XY_CB.currentIndexChanged.connect(self.Orientation_Lat)
+
+    def Univ_Lat_LE_Update(self):
+        if self.geomWidget.currentIndex() == 0:
+            if self.comboBox_3.currentIndex() == 1:
+                self.comboBox_5.addItems(sorted(self.regions))
+                if self.add_id_CB.isChecked():
+                    self.lineEdit_13.setText(self.cell_suffix + str(self.lineEdit_14.text()))
+                else:
+                    self.lineEdit_13.setText(self.cell_suffix)
+            elif self.comboBox_3.currentIndex() == 2:
+                if self.add_id_CB.isChecked():
+                    self.lineEdit_13.setText(self.universe_suffix + str(self.lineEdit_15.text()))
+                else:
+                    self.lineEdit_13.setText(self.universe_suffix)
+        elif self.geomWidget.currentIndex() == 1:
+            if self.add_id_lat_CB.isChecked():
+                self.lineEdit_17.setText(self.lattice_suffix + str(self.lineEdit_18.text()))
+            else:
+                self.lineEdit_17.setText(self.lattice_suffix)
 
     def RB_2D_Checked(self):
         if self.RB_2D.isChecked():
@@ -283,13 +317,11 @@ class ExportGeometry(QWidget):
                 self.Insert_Header = False
 
     def sync_surface_name1(self):
-        import string
         pos = self.lineEdit_11.cursorPosition()
         self.lineEdit_11.setCursorPosition(pos)
         self.surface_suffix = self.lineEdit_11.text().rstrip(string.digits)
 
     def sync_surface_name(self):
-        import string
         self.surface_suffix = self.lineEdit_11.text().rstrip(string.digits)
         self.lineEdit_12.setText(str(self.surface_id))
         if self.add_surf_id_CB.isChecked():
@@ -299,7 +331,6 @@ class ExportGeometry(QWidget):
             self.lineEdit_11.setText(self.surface_suffix)
 
     def sync_surface_id(self):
-        import string
         if self.lineEdit_12.text():
             self.surface_id = int(self.lineEdit_12.text())
             if self.add_surf_id_CB.isChecked():
@@ -307,16 +338,13 @@ class ExportGeometry(QWidget):
             else:
                 self.surface_suffix = self.lineEdit_11.text().rstrip(string.digits)
                 self.lineEdit_11.setText(self.surface_suffix)
-        else:
-            pass
 
     def sync_name1(self):
-        import string
         if self.geomWidget.currentIndex() == 0:
             if self.comboBox_3.currentIndex() == 1:
                 pos = self.lineEdit_13.cursorPosition()
                 self.lineEdit_13.setCursorPosition(pos)
-                self.cell_suffix = 'Cell'   #self.lineEdit_13.text().rstrip(string.digits)
+                self.cell_suffix = self.lineEdit_13.text().rstrip(string.digits)  # 'Cell'
             if self.comboBox_3.currentIndex() == 2:
                 pos = self.lineEdit_13.cursorPosition()
                 self.lineEdit_13.setCursorPosition(pos)
@@ -327,7 +355,6 @@ class ExportGeometry(QWidget):
             self.lattice_suffix = self.lineEdit_17.text().rstrip(string.digits)
 
     def sync_name(self):
-        import string
         if self.geomWidget.currentIndex() == 0:
             if self.comboBox_3.currentIndex() == 1:
                 self.lineEdit_14.setText(str(self.cell_id))
@@ -335,7 +362,7 @@ class ExportGeometry(QWidget):
                     self.lineEdit_13.setText(self.cell_suffix + str(self.cell_id))
                 else:
                     if self.cell_suffix in self.lineEdit_13.text():
-                        self.cell_suffix = 'Cell'   #self.lineEdit_13.text().rstrip(string.digits)
+                        self.cell_suffix = self.lineEdit_13.text().rstrip(string.digits)  # 'Cell'
                     self.lineEdit_13.setText(self.cell_suffix)
             elif self.comboBox_3.currentIndex() == 2:
                 self.lineEdit_14.setText(str(self.universe_id))
@@ -346,7 +373,6 @@ class ExportGeometry(QWidget):
                         self.universe_suffix = self.lineEdit_13.text().rstrip(string.digits)
                     self.lineEdit_13.setText(self.universe_suffix)
         elif self.geomWidget.currentIndex() == 1:
-            self.lattice_suffix = self.lineEdit_17.text().rstrip(string.digits)
             self.lineEdit_18.setText(str(self.lattice_id))
             if self.add_id_lat_CB.isChecked():
                 self.lineEdit_17.setText(self.lattice_suffix + str(self.lattice_id))
@@ -355,7 +381,6 @@ class ExportGeometry(QWidget):
                 self.lineEdit_17.setText(self.lattice_suffix)
 
     def sync_id(self):
-        import string
         if self.geomWidget.currentIndex() == 0:
             if self.comboBox_3.currentIndex() == 1:
                 self.lineEdit_15.hide()
@@ -365,7 +390,7 @@ class ExportGeometry(QWidget):
                     if self.add_id_CB.isChecked():
                         self.lineEdit_13.setText(self.cell_suffix + str(self.cell_id))
                     else:
-                        self.cell_suffix = 'Cell'   #self.lineEdit_13.text().rstrip(string.digits)
+                        self.cell_suffix = self.lineEdit_13.text().rstrip(string.digits)  # 'Cell'
                         self.lineEdit_13.setText(self.cell_suffix)
             elif self.comboBox_3.currentIndex() == 2:
                 self.lineEdit_14.hide()
@@ -377,10 +402,8 @@ class ExportGeometry(QWidget):
                     else:
                         self.universe_suffix = self.lineEdit_13.text().rstrip(string.digits)
                         self.lineEdit_13.setText(self.universe_suffix)
-                else:
-                    pass
+
         elif self.geomWidget.currentIndex() == 1:
-            suffix = self.lattice_suffix
             if self.lineEdit_18.text():
                 self.lattice_id = int(self.lineEdit_18.text())
                 if self.add_id_lat_CB.isChecked():
@@ -388,31 +411,6 @@ class ExportGeometry(QWidget):
                 else:
                     self.lattice_suffix = self.lineEdit_17.text().rstrip(string.digits)
                     self.lineEdit_17.setText(self.lattice_suffix)
-            else:
-                pass
-
-    def sync_Lat_name(self):
-        import string
-        self.lattice_suffix = self.lineEdit_17.text().rstrip(string.digits)
-        self.lineEdit_17.setText(str(self.lattice_id))
-        if self.add_id_CB.isChecked():
-            self.lineEdit_17.setText(self.lattice_suffix + str(self.lattice_id))
-        else:
-            self.lattice_suffix = self.lineEdit_17.text().rstrip(string.digits)
-            self.lineEdit_17.setText(self.lattice_suffix)
-
-    def sync_Lat_id(self):
-        import string
-        self.lineEdit_18.setText(str(self.lattice_id))
-        if self.lineEdit_18.text():
-            self.lattice_id = int(self.lineEdit_18.text())
-            if self.add_id_CB.isChecked():
-                self.lineEdit_17.setText(self.lattice_suffix + str(self.lattice_id))
-            else:
-                self.lattice_suffix = self.lineEdit_17.text().rstrip(string.digits)
-                self.lineEdit_17.setText(self.lattice_suffix)
-        else:
-            pass
 
     def Reset_Fields(self):
         for item in [self.comboBox_3, self.Fill_ComboBox, self.comboBox_6, self.Operator_CB]:
@@ -446,15 +444,26 @@ class ExportGeometry(QWidget):
             self.wind = LatticeRect(self.spinBox.value(), self.spinBox_2.value(), self.spinBox_3.value(),
                               self.universe_id_list, self.textEdit, self.lineEdit_17)
             self.wind.show()
+            self.XY_CB.setEnabled(False)
         else:
-            self.wind = LatticeHex(self.spinBox.value(), self.spinBox_3.value(), self.XY_CB.currentText(),
+            self.Orientation_Lat()
+            #self.wind = LatticeHex(self.spinBox.value(), self.spinBox_3.value(), self.XY_CB.currentText(),
+            self.wind = LatticeHex(self.spinBox.value(), self.spinBox_3.value(), self.orientation,
                               self.universe_id_list, self.universe_name_list, self.textEdit)
             self.wind.show()
+            self.XY_CB.setEnabled(True)
+
+    def Orientation_Lat(self):
+        if self.XY_CB.currentText() == 'x':
+            self.orientation = 'x'
+        else:
+            self.orientation = 'y'   
 
     def Def_Lattice(self):
         self.textEdit.clear()
         self.lineEdit_24.setEnabled(False)
         self.lineEdit_19.setEnabled(False)
+        self.reset_widget()
         if self.comboBox_4.currentIndex() == 0:
             self.comboBox_6.show()
             self.Modify_TextEdit_PB.hide()
@@ -470,7 +479,7 @@ class ExportGeometry(QWidget):
             self.spinBox_3.setValue(1)
             self.XY_CB.hide()
             self.spinBox_2.show()
-            self.pushButton_6.setText("Add RectLattice >> ")
+            self.Add_Lat_PB.setText("Add RectLattice >> ")
             self.textEdit.setEnabled(True)
         else:
             self.comboBox_6.hide()
@@ -484,14 +493,14 @@ class ExportGeometry(QWidget):
             self.spinBox_3.setValue(1)
             self.XY_CB.show()
             self.spinBox_2.hide()
-            self.pushButton_6.setText("Add HexLattice >> ")
+            self.Add_Lat_PB.setText("Add HexLattice >> ")
 
     def Pick_Universe(self):
         if self.comboBox_6.currentIndex() > 0:
             self.textEdit.insertPlainText(self.comboBox_6.currentText() + ' ')
         self.comboBox_6.setCurrentIndex(0)
 
-    def Update_univ_list(self):
+    def Update_univ_CB_list(self):
         self.Region_TextEdit.clear()
         self.comboBox_6.clear()
         self.comboBox_6.addItem('Select Universes')
@@ -591,7 +600,9 @@ class ExportGeometry(QWidget):
             self.comboBox_5.setCurrentIndex(0)
 
     def Add_Lattice(self):
-        global nx, ny, nz
+        nx = self.spinBox.value()
+        ny = self.spinBox_2.value()
+        nz = self.spinBox_3.value()
         self.Insert_Header_Text()
         if not self.textEdit.toPlainText():
             self.showDialog('Warning', 'Lattice is empty !')
@@ -599,26 +610,30 @@ class ExportGeometry(QWidget):
         else:
             if self.lineEdit_17.text() == '':
                 self.showDialog('Warning', 'Cannot create lattice, select name first.')
+                return
             elif self.lineEdit_18.text() == '':
                 self.showDialog('Warning', 'Cannot create lattice, select lattice id first.')
+                return
             else:
                 if self.lineEdit_17.text() in self.lattice_name_list:
                     self.showDialog('Warning', 'Lattice name already used, select new name !')
-                elif self.lineEdit_18.text() in self.lattice_id_list:
+                    return
+                elif int(self.lineEdit_18.text()) in self.lattice_id_list or int(self.lineEdit_18.text()) in self.universe_id_list:
                     self.showDialog('Warning', 'Lattice id already used, select new id !')
+                    return
                 else:
                     if self.lineEdit_21.text() == '' or self.lineEdit_22.text() == '' or self.lineEdit_23.text() == '':
                         self.showDialog('Warning', 'Required fields must be filled !')
-                        #return
+                        return
                     if self.RB_2D.isChecked():
                         if self.comboBox_4.currentIndex() == 0:
                             if self.lineEdit_20.text() == '':
                                 self.showDialog('Warning', 'Required fields must be filled !')
-                                #return
+                                return
                     elif self.RB_3D.isChecked():
                         if self.lineEdit_19.text() == '' or self.lineEdit_24.text() == '':
                             self.showDialog('Warning', 'Required fields must be filled !')
-                            #return
+                            return
                     ########################### RectLattice #######################
                     if self.comboBox_4.currentIndex() == 0:
                         document = self.textEdit.toPlainText()
@@ -627,7 +642,6 @@ class ExportGeometry(QWidget):
                         #document = document.split(',')
                         document = list(filter(str.strip, document))  # remove line if it contains only white spaces
                         document = list(filter(None, document))     # remove empty lines
-                        print(ny,nz)
                         if nz == 1:
                             if ny == 1:
                                 document1 = ''
@@ -646,11 +660,13 @@ class ExportGeometry(QWidget):
                             liste = list(filter(lambda ele: ele != "['", liste))
                             liste = list(filter(lambda ele: "']" not in ele, liste))
                             liste = list(filter(lambda ele: ele != "'", liste))
+                            liste = [int(str(ele).replace("'", "")) for ele in liste]
                             for i in liste:
                                 if i not in self.universe_id_list:
                                     self.showDialog('Warning', "At least one universe id doesn't mutch available universe names !")
                                     return
-                            liste = [self.universe_name_list[int(i)-1] for i in liste]
+                            #liste = [self.universe_name_list[int(i)-1] for i in liste]
+                            liste = [self.universe_name_list[self.universe_id_list.index(int(id))] for id in liste]
                             j += 1
                             element_number += len(liste)
                             if j != 1:
@@ -683,7 +699,7 @@ class ExportGeometry(QWidget):
                             self.showDialog('Warning', 'Lattice elements number not equal to specified number !')
                             return
                         else:
-                            print(self.lineEdit_17.text() + "= openmc.RectLattice(" + "lattice_id=" + self.lineEdit_18.text() + ")")
+                            print(self.lineEdit_17.text() + " = openmc.RectLattice(" + "lattice_id=" + self.lineEdit_18.text() + ")")
                             if self.RB_2D.isChecked():
                                 print(self.lineEdit_17.text() + ".lower_left = [" + self.lineEdit_22.text() + ',' + self.lineEdit_23.text() + "]")
                                 print(self.lineEdit_17.text() + ".pitch = [" + self.lineEdit_21.text() + ',' + self.lineEdit_20.text() + "]")
@@ -695,10 +711,10 @@ class ExportGeometry(QWidget):
                                 print(self.lineEdit_17.text() + ".outer = " + self.comboBox_7.currentText())
                             self.lattice_name_list.append(self.lineEdit_17.text())
                             self.lattice_id_list.append(self.lineEdit_18.text())
-                            if self.lattice_id_list:
+                            if len(self.lattice_id_list) > 0:
                                 idx = int(self.lattice_id_list[-1]) + 1
                                 while True:
-                                    if idx not in self.universe_id_list:
+                                    if idx not in self.universe_id_list and idx not in self.universe_id_list:
                                         self.lattice_id = idx
                                         break
                                     else:
@@ -706,7 +722,7 @@ class ExportGeometry(QWidget):
                             else:
                                 idx = int(self.lineEdit_18.text()) + 1
                                 while True:
-                                    if idx not in self.universe_id_list:
+                                    if idx not in self.universe_id_list and idx not in self.lattice_id_list:
                                         self.lattice_id = idx
                                         break
                                     else:
@@ -735,7 +751,6 @@ class ExportGeometry(QWidget):
                         self.tot_element = 1
                         self.rings = self.spinBox.value()
                         self.axial = self.spinBox_3.value()
-                        self.orientation = self.XY_CB.currentText()
                         for k in range(self.axial + 1):   # last item not used
                             self.altitude.append("Axial%s" % (k + 1))
                         for name in self.altitude[:-1]:
@@ -759,19 +774,19 @@ class ExportGeometry(QWidget):
                         indices = self.Ring['indices']
                         xy_ind = sorted(list(zip(xy_coordinates, indices)), key=lambda x: (x[0][1], x[0][0]))
                         # ///////////////////////////////// insert text /////////////////////////////////////////
-                        self.Find_string(self.plainTextEdit, "openmc.HexLattice")
-                        if self.Insert_Header:
-                            print(self.lineEdit_17.text() + "= openmc.HexLattice(" + "lattice_id=" + self.lineEdit_18.text() + ")")
-                            if self.RB_2D.isChecked():
-                                print(self.lineEdit_17.text() + ".center = [" + self.lineEdit_22.text() + ',' + self.lineEdit_23.text() + "]")
-                                print(self.lineEdit_17.text() + ".pitch = [" + self.lineEdit_21.text() + "]")
-                            else:
-                                print(
-                                    self.lineEdit_17.text() + ".center = [" + self.lineEdit_22.text() + ',' + self.lineEdit_23.text() + ',' + self.lineEdit_24.text() + "]")
-                                print(
-                                    self.lineEdit_17.text() + ".pitch = [" + self.lineEdit_21.text() + ',' + self.lineEdit_19.text() + "]")
-                            if self.comboBox_7.currentIndex() != 0:
-                                print(self.lineEdit_17.text() + ".outer = " + self.comboBox_7.currentText())
+                        #self.Find_string(self.plainTextEdit, "openmc.HexLattice")
+                        #if self.Insert_Header:
+                        print(self.lineEdit_17.text() + "= openmc.HexLattice(" + "lattice_id=" + self.lineEdit_18.text() + ")")
+                        if self.RB_2D.isChecked():
+                            print(self.lineEdit_17.text() + ".center = [" + self.lineEdit_22.text() + ',' + self.lineEdit_23.text() + "]")
+                            print(self.lineEdit_17.text() + ".pitch = [" + self.lineEdit_21.text() + "]")
+                        else:
+                            print(
+                                self.lineEdit_17.text() + ".center = [" + self.lineEdit_22.text() + ',' + self.lineEdit_23.text() + ',' + self.lineEdit_24.text() + "]")
+                            print(
+                                self.lineEdit_17.text() + ".pitch = [" + self.lineEdit_21.text() + ',' + self.lineEdit_19.text() + "]")
+                        if self.comboBox_7.currentIndex() != 0:
+                            print(self.lineEdit_17.text() + ".outer = " + self.comboBox_7.currentText())
                         # ///////////////////////////////////////////////////////////////////////////////////////
                         self.axials_lat_univ = []
                         if tot_rows == rows * self.axial:
@@ -828,11 +843,11 @@ class ExportGeometry(QWidget):
                                         stop = indices
                                         self.lattice[name][ir]['sorted_univ_id'] = [ u[2] for u in xy_ind_univ_sorted_by_ring[start:stop]]
                                         list1 = self.universe_name_list
-                                        list2 = self.lattice[name][ir]['sorted_univ_id']
+                                        list2 = [ int(item) for item in self.lattice[name][ir]['sorted_univ_id']]
                                         list3 = self.universe_id_list
                                         start = stop
                                         if set(list2).issubset(list3):
-                                            self.lattice[name][ir]['sorted_univ_name'] = [list1[int(i)-1] for i in list2]
+                                            self.lattice[name][ir]['sorted_univ_name'] = [list1[list3.index(id)] for id in list2]
                                             ring_universes = self.lattice[name][ir]['sorted_univ_name']
                                         else:
                                             self.showDialog('Warning', "At least one universe id doesn't mutch available universe names !")
@@ -857,9 +872,10 @@ class ExportGeometry(QWidget):
                             else:
                                 print(self.lineEdit_17.text() + ".universes = " + padding.join(liste))
 
+                            print(self.lineEdit_17.text() + ".orientation = " + "'" + self.orientation + "'")
                             self.lattice_name_list.append(self.lineEdit_17.text())
                             self.lattice_id_list.append(self.lineEdit_18.text())
-                            if self.lattice_id_list:
+                            if len(self.lattice_id_list) > 0:
                                 idx = int(self.lattice_id_list[-1]) + 1
                                 while True:
                                     if idx not in self.universe_id_list:
@@ -907,7 +923,7 @@ class ExportGeometry(QWidget):
         freque.append(running_count)
         return element, freque
 
-    def Add_Cell(self):
+    def Add_Cell_Univ(self):
         self.Insert_Header_Text()
         if self.comboBox_3.currentIndex() == 1:
             self.Translation_CB.setEnabled(True)
@@ -915,14 +931,18 @@ class ExportGeometry(QWidget):
             self.cells.append(self.lineEdit_13.text())
             item = 'cell'
             if self.lineEdit_13.text() == '':
-                self.showDialog('Warning', 'Cannot create ' + item + ', select name first.')
+                self.showDialog('Warning', 'Cannot create ' + item + ', select name first!')
+                return
             elif self.lineEdit_14.text() == '':
-                self.showDialog('Warning', 'Cannot create  ' + item + ', select cell id first.')
+                self.showDialog('Warning', 'Cannot create  ' + item + ', select cell id first!')
+                return
             else:
                 if self.lineEdit_13.text() in self.cell_name_list:
                     self.showDialog('Warning', 'Cell name already used, select new name !')
-                elif self.lineEdit_14.text() in self.cell_id_list:
+                    return
+                elif int(self.lineEdit_14.text()) in self.cell_id_list:
                     self.showDialog('Warning', 'Cell id already used, select new id !')
+                    return
                 else:
                     if self.lineEdit_13.text() not in self.regions:
                         self.regions.append(self.lineEdit_13.text())
@@ -972,17 +992,20 @@ class ExportGeometry(QWidget):
         elif self.comboBox_3.currentIndex() == 2:
             '''self.Translation_CB.setEnabled(False)
             self.Rotation_CB.setEnabled(False)'''
-            #self.universes.append(self.lineEdit_13.text())
             item = 'universe'
             if self.lineEdit_13.text() == '':
-                self.showDialog('Warning', 'Cannot create ' + item + ', select name first.')
+                self.showDialog('Warning', 'Cannot create ' + item + ', select name first!')
+                return
             elif self.lineEdit_15.text() == '':
-                self.showDialog('Warning', 'Cannot create  ' + item + ', select cell id first.')
+                self.showDialog('Warning', 'Cannot create  ' + item + ', select cell id first!')
+                return
             else:
-                if self.lineEdit_13.text() in self.universe_name_list:
+                if self.lineEdit_13.text() in self.universe_name_list or self.lineEdit_13.text() in self.lattice_name_list:
                     self.showDialog('Warning', 'Universe name already used, select new name !')
-                elif self.lineEdit_15.text() in self.universe_id_list:
+                    return
+                elif int(self.lineEdit_15.text()) in self.universe_id_list or int(self.lineEdit_15.text()) in self.lattice_id_list:
                     self.showDialog('Warning', 'Universe id already used, select new id !')
+                    return
                 else:
                     print(self.lineEdit_13.text() + " = openmc.Universe(universe_id=" + self.lineEdit_15.text() + "," + " name='" + self.lineEdit_13.text() + "')")
                     if self.Region_TextEdit:
@@ -990,22 +1013,21 @@ class ExportGeometry(QWidget):
                         self.cells_in_universes += textList
                         print(self.lineEdit_13.text() + ".add_cells(" + str(textList).replace("'","") +")")
                     self.universe_name_list.append(self.lineEdit_13.text())
+                    self.universe_id_list.append(self.lineEdit_15.text())
                     self.Fill_ComboBox.addItem(self.lineEdit_13.text())
                     self.universe_name_sub_list.append(self.lineEdit_13.text())
-                    self.universe_id_list.append(self.lineEdit_15.text())
-                    #self.lattice_id_list.append(self.lineEdit_15.text())
                     self.universe_id_sub_list.append(self.lineEdit_15.text())
-                    #self.universe_id = int(self.lineEdit_15.text()) + 1
-                    if self.universe_id_list:
+
+                    if len(self.universe_id_list) > 0:
                         idx = int(self.universe_id_list[-1]) + 1
                         while True:
-                            if idx not in self.lattice_id_list:
+                            if idx not in self.universe_id_list and idx not in self.lattice_id_list:
                                 self.universe_id = idx
                                 break
                             else:
                                 idx += 1
                     else:
-                        idx = int(self.lineEdit_14.text()) + 1
+                        idx = 1
                         while True:
                             if idx not in self.lattice_id_list:
                                 self.universe_id = idx
@@ -1013,13 +1035,15 @@ class ExportGeometry(QWidget):
                             else:
                                 idx += 1
                     self.lineEdit_15.setText(str(self.universe_id))
+
                     if self.add_id_CB.isChecked():
                         self.lineEdit_13.setText(self.universe_suffix + str(self.universe_id))
                     else:
                         self.lineEdit_13.setText(self.universe_suffix)
-                        self.lineEdit_18.setText(str(idx))
+                    
+                    self.lineEdit_18.setText(str(idx + 1))
                     if self.add_id_lat_CB.isChecked():
-                        self.lineEdit_17.setText(self.lattice_suffix + str(idx))
+                        self.lineEdit_17.setText(self.lattice_suffix + str(idx + 1))
                     else:
                         self.lineEdit_17.setText(self.lattice_suffix)
 
@@ -1048,7 +1072,7 @@ class ExportGeometry(QWidget):
                      self.Phi_LE, self.Psi_LE]:
                 item.setEnabled(False)
 
-    def Def_Cell(self):
+    def Def_Cell_Univ(self):
         self.comboBox_5.clear()
         for item in [self.Translation_CB, self.Rotation_CB, self.XX_LE, self.YY_LE, self.ZZ_LE, self.Theta_LE,
                      self.Phi_LE, self.Psi_LE]:
@@ -1100,6 +1124,10 @@ class ExportGeometry(QWidget):
             self.Fill_ComboBox.setEnabled(False)
             self.Add_Cell_Univ_PB.setText("Add Univ >>")
             self.lineEdit_15.setText(str(self.universe_id))
+        else:
+            self.lineEdit_13.clear()
+            self.lineEdit_14.clear()
+            self.lineEdit_15.clear()
 
     def Add_Surface(self):
         self.Insert_Header_Text()
@@ -1117,8 +1145,10 @@ class ExportGeometry(QWidget):
 
             if self.lineEdit_11.text() in self.surface_name_list:
                 self.showDialog('Warning', 'Surface name already used, select new name !')
-            elif self.lineEdit_12.text() in self.surface_id_list:
+                return
+            elif int(self.lineEdit_12.text()) in self.surface_id_list:
                 self.showDialog('Warning', 'Surface id already used, select new id !')
+                return
             else:
                 if self.lineEdit_11.text() not in self.regions:
                     self.regions.append(self.lineEdit_11.text())
@@ -1197,18 +1227,19 @@ class ExportGeometry(QWidget):
                                 "b=" + self.lineEdit_8.text() + ",", "c=" + self.lineEdit_9.text() + ",",
                                 "name='" + self.lineEdit_11.text() +
                                 "'" + Boundary_Def + ')')
-                elif self.comboBox.currentIndex() == 17:  # Hexagonal prism
-                    origin = (float(self.lineEdit.text()), float(self.lineEdit_2.text()),)
-                    print(self.lineEdit_11.text() + '= openmc.model.' + self.comboBox.currentText() + '(',
-                              "edge_length=" + self.lineEdit_7.text() + ",", "orientation='" + self.Orientation_CB.currentText() + "',",
-                              "origin=" + str(origin) + ",",
-                              "corner_radius=" + self.lineEdit_4.text(), Boundary_Def + ')')
-                elif self.comboBox.currentIndex() == 18:  # Rectangular prism
+                elif self.comboBox.currentIndex() == 17:  # Rectangular prism
                     origin = (float(self.lineEdit.text()), float(self.lineEdit_2.text()),)
                     print(self.lineEdit_11.text() + '= openmc.model.' + self.comboBox.currentText() + '(',
                               self.lineEdit_7.text() + ",", self.lineEdit_8.text() + ",", "axis='" + self.Orientation_CB.currentText() + "',",
                               "origin=" + str(origin) + ",",
                               "corner_radius=" + self.lineEdit_4.text(), Boundary_Def + ')')
+                elif self.comboBox.currentIndex() == 18:  # Hexagonal prism
+                    origin = (float(self.lineEdit.text()), float(self.lineEdit_2.text()),)
+                    print(self.lineEdit_11.text() + '= openmc.model.' + self.comboBox.currentText() + '(',
+                              "edge_length=" + self.lineEdit_7.text() + ",", "orientation='" + self.Orientation_CB.currentText() + "',",
+                              "origin=" + str(origin) + ",",
+                              "corner_radius=" + self.lineEdit_4.text(), Boundary_Def + ')')
+
                 self.surface_name_list.append(self.lineEdit_11.text())
                 self.surface_name_sub_list.append(self.lineEdit_11.text())
                 self.surface_id_list.append(self.lineEdit_12.text())
@@ -1435,7 +1466,8 @@ class ExportGeometry(QWidget):
             self.textEdit.clear()
         elif ret == qm.No:
             pass
-
+        self.textEdit.setEnabled(True)
+        
     def Clear_Lists(self):
         if self.surface_name_sub_list:
             self.Remove_Selected(self.surface_name_sub_list, self.surface_name_list)
@@ -1479,12 +1511,11 @@ class ExportGeometry(QWidget):
 #%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 class LatticeRect(QWidget):
     from .func import resize_ui, showDialog, Exit
-    def __init__(self, nx, ny, nz, a, TexEdit, lineEdit_17, parent=None):
+    def __init__(self, nx, ny, nz, univ_id, TexEdit, lineEdit_17, parent=None):
         super(LatticeRect, self).__init__(parent)
         self.setWindowTitle("Fill Lattice Input Parameters")
         self.setWindowFlags(QtCore.Qt.CustomizeWindowHint | QtCore.Qt.WindowCloseButtonHint)
-        self.universe_id_list = a
-        #self.universe_id_list.pop(0)   # added
+        self.universe_id_list = univ_id
         self.textEdit = TexEdit
         self.lineEdit_17 = lineEdit_17
         self.nx = nx
@@ -1506,7 +1537,7 @@ class LatticeRect(QWidget):
         self.universes_combobox = QComboBox()
         typetablayout1.addWidget(self.universes_combobox, 1, 1)
         self.universes_combobox.addItem('Select universe ID')
-        self.universes_combobox.addItems(self.universe_id_list)
+        self.universes_combobox.addItems([str(item) for item in self.universe_id_list])
         self.layout.addWidget(self.tab1)
         self._initButtons()
         for i in range(nz):
@@ -1528,7 +1559,7 @@ class LatticeRect(QWidget):
                     self.combobox[nx*ny*num+m] = QComboBox()
                     typetablayout.addWidget(self.combobox[nx*ny*num+m], j+7, i+1)
                     self.combobox[nx * ny * num + m].addItem('0')
-                    self.combobox[nx * ny * num + m].addItems(self.universe_id_list)
+                    self.combobox[nx * ny * num + m].addItems([str(item) for item in self.universe_id_list])
                     m+=1
 
             self.layout.addWidget(self.typetab)
@@ -1554,7 +1585,6 @@ class LatticeRect(QWidget):
             self.universes_combobox.setCurrentIndex(0)
 
     def save(self, num):
-        global nx, ny, nz
         nx = self.nx
         ny = self.ny
         nz = self.nz
@@ -1610,12 +1640,12 @@ class LatticeRect(QWidget):
 #%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 class LatticeHex(QWidget):
     from .func import resize_ui, showDialog
-    def __init__(self, rings, axial, orientation, id, univ, TexEdit, parent=None):
+    def __init__(self, rings, axial, orientation, univ_id, univ, TexEdit, parent=None):
         super(QWidget, self).__init__(parent)
         self.setWindowTitle("Fill HexLattice Input Parameters")
         self.layout = QVBoxLayout(self)
         self.layout.setAlignment(QtCore.Qt.AlignTop)
-        self.universe_id_list = id
+        self.universe_id_list = univ_id
         self.universe_name_list = univ
         self.textEdit = TexEdit
         self.rings = rings
@@ -1670,7 +1700,7 @@ class LatticeHex(QWidget):
             typetablayout1.addWidget(self.universes_combobox[index], 0, index + 1)
             self.universes_combobox[index].addItem('Ring %s' % (index))
             self.universes_combobox[index].setStyleSheet(self.cbstyle[self.rings - index - 1])
-            self.universes_combobox[index].addItems(self.universe_id_list)
+            self.universes_combobox[index].addItems([str(item) for item in self.universe_id_list])
         scroll = QScrollArea()
         scroll.setWidget(groupBox1)
         scroll.setFixedHeight(80)
@@ -1727,7 +1757,7 @@ class LatticeHex(QWidget):
                 self.combobox[id].clear()
                 if name != self.altitude[-1]:
                     self.combobox[id].addItem('Select')
-                    self.combobox[id].addItems(self.universe_id_list)
+                    self.combobox[id].addItems([str(item) for item in self.universe_id_list])
                 else:
                     self.combobox[id].setSizeAdjustPolicy(QtWidgets.QComboBox.AdjustToContents)  # setMinimumWidth(75)
                     self.combobox[id].addItem(str((iring, self.rings_yy[index],)))
@@ -1967,9 +1997,7 @@ class LatticeHex(QWidget):
                     universes[y] = [self.combobox[m].currentText()]
                 m += 1
             Ring_row_by_row = dict(sorted(Ring_row_by_row.items())) # sorted by key = row index
-            #print('Ring_row_by_row',Ring_row_by_row)
             universes = dict(sorted(universes.items()))  # sorted by key = row index
-            #print(universes)
             self.textEdit.setFontPointSize(int(11))
             self.textEdit.setAlignment(Qt.AlignCenter)
             for y in Ring_row_by_row.keys():
@@ -1992,3 +2020,14 @@ class LatticeHex(QWidget):
             return False
         else:
             return float(n).is_integer()
+
+
+class EmittingStream(QtCore.QObject):
+    textWritten = QtCore.pyqtSignal(str)
+
+    def write(self, text):
+        self.textWritten.emit(str(text))
+        pass
+
+    def flush(self):
+        pass

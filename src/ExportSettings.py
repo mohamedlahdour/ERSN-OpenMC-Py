@@ -8,7 +8,7 @@ from PyQt5.QtGui import *
 from PyQt5 import uic
 from PyQt5 import QtCore, QtGui, QtWidgets
 from src.syntax_py import Highlighter
-from src.PyEdit import myEditor # added
+from src.PyEdit import TextEdit, NumberBar  
 
 class EmittingStream(QtCore.QObject):
     textWritten = QtCore.pyqtSignal(str)
@@ -84,10 +84,15 @@ class ExportSettings(QWidget):
         self.Name_LE.setText(''.join([i for i in self.Name_LE.text() if not i.isdigit()]) + str(self.Source_id))
 
         # add new editor
-        self.win = myEditor()
-        self.EditorLayout.addWidget(self.win)
-        self.cursor = self.win.editor.textCursor()
-        self.plainTextEdit = self.win.editor
+        self.plainTextEdit = TextEdit()
+        self.plainTextEdit.setWordWrapMode(QTextOption.NoWrap)
+        self.numbers = NumberBar(self.plainTextEdit)
+        layoutH = QHBoxLayout()
+        #layoutH.setSpacing(1.5)
+        layoutH.addWidget(self.numbers)
+        layoutH.addWidget(self.plainTextEdit)
+        self.EditorLayout.addLayout(layoutH, 0, 0)
+        
         sys.stdout = EmittingStream(textWritten=self.normalOutputWritten)
         # to show window at the middle of the screen and resize it to the screen size
         self.resize_ui()
@@ -131,9 +136,9 @@ class ExportSettings(QWidget):
         self.Def_Source_ToolTips()
         self.Photon_Cut.setDisabled(True)
         self.ttb_RB.setDisabled(True)
-        self.tel_RB.setDisabled(True)
+        self.led_RB.setDisabled(True)
         self.ttb_RB.setChecked(True)
-        self.tel_RB.setChecked(False)
+        self.led_RB.setChecked(False)
         self.Create_Separate_SRC_CB.hide()
         self.Create_Surface_SRC_CB.hide()
         self.Source_Surfaces_CB.hide()
@@ -225,7 +230,7 @@ class ExportSettings(QWidget):
             self.Photon_CB.setEnabled(True)
             '''self.Photon_Cut.setEnabled(False)'''
             self.ttb_RB.setChecked(True)
-            self.tel_RB.setChecked(False)
+            self.led_RB.setChecked(False)
         else:
             '''self.Create_Separate_SRC_CB.hide()
             self.Create_Surface_SRC_CB.hide()'''
@@ -236,7 +241,7 @@ class ExportSettings(QWidget):
             self.Photon_CB.setEnabled(False)
             '''self.Photon_Cut.setDisabled(False)'''
             self.ttb_RB.setEnabled(False)
-            self.tel_RB.setEnabled(False)
+            self.led_RB.setEnabled(False)
             self.Photon_Cut.setEnabled(False)
             self.Photon_CB.setChecked(False)
             self.Create_Separate_SRC_CB.setChecked(False)
@@ -279,13 +284,13 @@ class ExportSettings(QWidget):
     def Widget_Status_1(self):                              # if photon mode changed
         if self.Photon_CB.isChecked():
             self.ttb_RB.setEnabled(True)
-            self.tel_RB.setEnabled(True)
+            self.led_RB.setEnabled(True)
             self.Photon_Cut.setEnabled(True)
             self.Label_17.setEnabled(True)
             self.Label_18.setEnabled(True)
         else:
             self.ttb_RB.setEnabled(False)
-            self.tel_RB.setEnabled(False)
+            self.led_RB.setEnabled(False)
             self.Photon_Cut.setEnabled(False)
             self.Label_17.setEnabled(False)
             self.Label_18.setEnabled(False)
@@ -361,6 +366,7 @@ class ExportSettings(QWidget):
     def Def_Settings(self, comboBox_Index, msg ):
         if comboBox_Index == 0:
             self.showDialog('Warning', msg)
+            return
         else:
             self.Find_string(self.v_1, "openmc.Settings")
             if self.Insert_Header:
@@ -417,7 +423,7 @@ class ExportSettings(QWidget):
                         print("settings.cutoff = {'energy_photon' : " + self.Photon_Cut.text() + " }")
                         if self.ttb_RB.isChecked():
                             print("settings.electron_treatment = 'ttb'")
-                        elif self.tel_RB.isChecked():
+                        elif self.led_RB.isChecked():
                             print("settings.electron_treatment = 'led'")
                     if self.Create_Separate_SRC_CB.isChecked():
                         print("settings.sourcepoint = {‘separate’: True}")
@@ -448,6 +454,7 @@ class ExportSettings(QWidget):
             pass
         else:
             self.showDialog('Warning', 'Lists must be the same length. Check the entered data !')
+            return
             self.Error = 1
         LineEdit1.setText(str(List1).replace("'", ''))
         LineEdit2.setText(str(List2).replace("'", ''))
@@ -477,15 +484,15 @@ class ExportSettings(QWidget):
                 print("settings.cutoff = {'energy_photon' : " + self.Photon_Cut.text() + " }")
                 if self.ttb_RB.isChecked():
                     print("settings.electron_treatment = 'ttb'")
-                elif self.tel_RB.isChecked():
-                    print("settings.electron_treatment = 'tel'")
+                elif self.led_RB.isChecked():
+                    print("settings.electron_treatment = 'led'")
             else:
                 self.Find_string(Document, "settings.electron_treatment")
                 if self.Insert_Header:
                     if self.ttb_RB.isChecked():
                         print("settings.electron_treatment = 'ttb'")
-                    elif self.tel_RB.isChecked():
-                        print("settings.electron_treatment = 'tel'")
+                    elif self.led_RB.isChecked():
+                        print("settings.electron_treatment = 'led'")
 
     def Volume_Calculation(self):
         self.Import_OpenMC()
@@ -497,18 +504,22 @@ class ExportSettings(QWidget):
             self.Find_string(self.v_1, 'eigenvalue')
             if not self.Insert_Header:
                 self.showDialog('Warning', 'Could not be added, Eigenvalue Mode already specified in the project !')
+                return
             else:
                 self.Find_string(self.v_1, 'fixed source')
                 if not self.Insert_Header:
                     self.showDialog('Warning', 'Could not be added, Fixed-source Mode already specified in the project !')
+                    return
                 else:
                     self.Find_string(self.plainTextEdit, 'eigenvalue')
                     if not self.Insert_Header:
                         self.showDialog('Warning', 'Only one run mode is allowed in the project !')
+                        return
                     else:
                         self.Find_string(self.plainTextEdit, 'fixed source')
                         if not self.Insert_Header:
                             self.showDialog('Warning', 'Only one run mode is allowed in the project !')
+                            return
                         else:
                             string_to_find = "settings.run_mode = 'Volume'"
                             self.Find_string(self.plainTextEdit, string_to_find)
@@ -1183,6 +1194,7 @@ class ExportSettings(QWidget):
                 return
             if self.Error == 1:
                 self.showDialog('Warning', 'The lists in the energy distribution must be the same length !')
+                return
 
     def Source_Angle_Distribution(self):
         #   ////////////////////////////////   Angle distribution   /////////////////////////////////
@@ -1232,6 +1244,7 @@ class ExportSettings(QWidget):
             print(self.angle + ' = openmc.stats.PolarAzimuthal(mu_dist, phi_dist, reference_uvw=' + self.Ref_UVW_CB.currentText() + ')')
         if Error != 0:
             self.showDialog('Warning', 'The lists in the angle distribution must be the same length !')
+            return
 
     def Add_Sources(self):
         self.Import_OpenMC()
@@ -1263,25 +1276,29 @@ class ExportSettings(QWidget):
                 self.Number_of_Sources.show()
                 if float(self.Strength_LE.text()) >= 1.:
                     self.showDialog('Warning', 'Strength must be smaller than 1. !.')
-            self.Source_Spatial_Distribution()
-            if self.ErrorSP != 0:
-                return
-            self.Source_Energy_Distribution()
-            if self.ErrorEn != 0:
-                return
-            self.Source_Angle_Distribution()
-            if self.Energy_Dist_CB.currentIndex() == 0:
-                energy_str = ''
+            if self.Name_LE.text() not in self.Source_name_list:
+                self.Source_Spatial_Distribution()
+                if self.ErrorSP != 0:
+                    return
+                self.Source_Energy_Distribution()
+                if self.ErrorEn != 0:
+                    return
+                self.Source_Angle_Distribution()
+                if self.Energy_Dist_CB.currentIndex() == 0:
+                    energy_str = ''
+                else:
+                    energy_str = self.energy + ', '
+                if self.Direction_Dist_CB.currentIndex() == 0:
+                    angle_str = ''
+                else:
+                    angle_str = self.angle + ', '
+                print(str(self.Name_LE.text()) + ' = openmc.Source(' + self.spatial + ', ' + angle_str + energy_str + 'strength=' + str(
+                        self.Strength_LE.text()) + ', particle=' + self.Particle + ')\n')
+                self.Source_name_list.append(self.Name_LE.text())
+                self.Source_id_list.append(self.Source_id)
             else:
-                energy_str = self.energy + ', '
-            if self.Direction_Dist_CB.currentIndex() == 0:
-                angle_str = ''
-            else:
-                angle_str = self.angle + ', '
-            print(str(self.Name_LE.text()) + ' = openmc.Source(' + self.spatial + ', ' + angle_str + energy_str + 'strength=' + str(
-                    self.Strength_LE.text()) + ', particle=' + self.Particle + ')\n')
-            self.Source_name_list.append(self.Name_LE.text())
-            self.Source_id_list.append(self.Source_id)
+                self.showDialog('Warning', 'Source name must not be repeated!')
+                return
             document = self.v_1.toPlainText()
             lines = document.split('\n')
             strg = 'settings.source = ' + str(self.Source_name_list).replace("'", "")
@@ -1364,10 +1381,10 @@ class ExportSettings(QWidget):
             cursor = self.v_1.textCursor()
             cursor.insertText(document)
         self.text_inserted = True
+        self.plainTextEdit.clear()
 
-    def clear_text(self, text):
-        if text != "\n":
-            self.plainTextEdit.clear()
+    def clear_text(self):
+        self.plainTextEdit.clear()
 
     def normalOutputWritten(self,text):
         self.highlighter = Highlighter(self.plainTextEdit.document())

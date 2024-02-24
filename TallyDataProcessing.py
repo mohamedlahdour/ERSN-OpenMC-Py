@@ -3784,10 +3784,10 @@ class VLine(QFrame):
         self.setFrameShape(self.VLine | self.Sunken)
 
 #  to be removed if called by gui.py
-'''qapp = QApplication(sys.argv)
+qapp = QApplication(sys.argv)
 mainwindow = TallyDataProcessing()
 mainwindow.show()
-sys.exit(qapp.exec())'''
+sys.exit(qapp.exec())
 
 
 

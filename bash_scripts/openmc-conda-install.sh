@@ -109,7 +109,11 @@ if [[ $INSTALL_PQTY == yes ]]; then
         if [[ -z "$(conda list|grep pyqt)" ]]; then
             echo
             echo "#########               PyQT5 will be installed !           #########"
-            conda install -y pyqt
+            #conda install -y pyqt
+            pip install pyqt5
+            echo
+            echo "==> If QtCore module cannot be loeded from PyQt5 force reinstall PyQt5 <=="
+            echo "==> Command : python3 -m pip install --upgrade --force-reinstall PyQt5 <=="
             echo
             echo "==> For changes to take effect, close and re-open your current shell. <=="
         fi
@@ -136,6 +140,8 @@ fi
 if [[ $INSTALL_PREREQUISITES == yes ]]; then
     # Make sure conda is activated 
     . $HOME/miniconda3/etc/profile.d/conda.sh
+    rm ~/.condarc
+    conda config --set channel_priority flexible
     conda activate
     # Create new Python environment to install everything into
     if [[ ! "$HOME/miniconda3/envs/$ENVNAME" || ! -d "$HOME/miniconda3/envs/$ENVNAME" ]]; then
@@ -185,6 +191,9 @@ if [[ $INSTALL_PREREQUISITES == yes ]]; then
     conda install -y -c conda-forge vtk
     conda install -y tbb=2020.2
     conda install -y jsoncpp=1.8.3
+
+    # to avoid this warning : libGL error: MESA-LOADER: failed to open iris
+    conda install -c conda-forge libstdcxx-ng
 fi
 # conda activate $ENVNAME
 # echo "#########     $ENVNAME activated     #########"

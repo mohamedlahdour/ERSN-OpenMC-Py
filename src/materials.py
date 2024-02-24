@@ -165,7 +165,7 @@ ATOMIC_SYMBOL = {119: 'None', 0: 'n', 1: 'H', 2: 'He', 3: 'Li', 4: 'Be', 5: 'B',
                  113: 'Nh', 114: 'Fl', 115: 'Mc', 116: 'Lv', 117: 'Ts',
                  118: 'Og'}
 
-THERMAL_SCATTERING = ["None","c_Be_in_BeO", "c_Be", "c_C6H6", "c_C_in_SiC", 
+THERMAL_SCATTERING = ["None","c_Al27", "c_Be_in_BeO", "c_Be", "c_C6H6", "c_C_in_SiC", 
                       "c_D_in_D2O", "c_Fe56", "c_Graphite", "c_Graphite_10p",
                       "c_Graphite_30p", "c_H_in_H2O", "c_H_in_H2O_solid", 
                       "c_H_in_C5O2H8", "c_H_in_CH2", "c_H_in_YH2",

@@ -11,7 +11,7 @@
    </rect>
   </property>
   <property name="windowTitle">
-   <string>ERSN-OpenMC-Py verssion 1.0</string>
+   <string>ERSN-OpenMC-Py verssion 1.2</string>
   </property>
   <widget class="QWidget" name="centralwidget">
    <layout class="QGridLayout" name="gridLayout_2">
@@ -48,7 +48,7 @@
           <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; color:#008000;&quot;&gt;IMPORTANTE : For changes to take effect, after miniconda installation,close and re-open your current shell and the GUI !&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
          </property>
          <property name="currentIndex">
-          <number>2</number>
+          <number>0</number>
          </property>
          <widget class="QWidget" name="tab_in_miniconda">
           <attribute name="title">
@@ -339,7 +339,7 @@
                   <item>
                    <widget class="QRadioButton" name="rB_MIRROR_URL">
                     <property name="enabled">
-                     <bool>false</bool>
+                     <bool>true</bool>
                     </property>
                     <property name="text">
                      <string>Mirror</string>
@@ -854,7 +854,7 @@
          </widget>
          <widget class="QWidget" name="tab_install_openmc">
           <attribute name="title">
-           <string>Intsall OpenMC</string>
+           <string>Install OpenMC</string>
           </attribute>
           <layout class="QGridLayout" name="gridLayout_24">
            <item row="0" column="0">
@@ -1211,7 +1211,12 @@
                   </item>
                   <item>
                    <property name="text">
-                    <string>v0.12.1</string>
+                    <string>v0.13.3</string>
+                   </property>
+                  </item>
+                  <item>
+                   <property name="text">
+                    <string>v0.12.2</string>
                    </property>
                   </item>
                   <item>
@@ -1247,7 +1252,7 @@
                   <item row="0" column="0" rowspan="2" colspan="2">
                    <widget class="QRadioButton" name="rB_py37">
                     <property name="text">
-                     <string>3.7</string>
+                     <string>3.7 </string>
                     </property>
                     <attribute name="buttonGroup">
                      <string notr="true">buttonGroup</string>
@@ -1985,13 +1990,6 @@
        <set>Qt::AlignCenter</set>
       </property>
       <layout class="QGridLayout" name="gridLayout_9">
-       <item row="0" column="0">
-        <widget class="QPlainTextEdit" name="receiveArea">
-         <property name="lineWrapMode">
-          <enum>QPlainTextEdit::NoWrap</enum>
-         </property>
-        </widget>
-       </item>
        <item row="1" column="0">
         <layout class="QHBoxLayout" name="horizontalLayout_4">
          <item>
@@ -2072,6 +2070,9 @@
           </spacer>
          </item>
         </layout>
+       </item>
+       <item row="0" column="0">
+        <layout class="QGridLayout" name="EditorLayout"/>
        </item>
       </layout>
      </widget>
@@ -2250,7 +2251,6 @@
   <tabstop>pB_Refresh_conda</tabstop>
   <tabstop>pB_Start_conda</tabstop>
   <tabstop>pB_Cancel_conda</tabstop>
-  <tabstop>receiveArea</tabstop>
   <tabstop>pB_Clear_Text</tabstop>
   <tabstop>pB_exit</tabstop>
   <tabstop>rB_py37_prerequis</tabstop>
@@ -2280,9 +2280,9 @@
  <resources/>
  <connections/>
  <buttongroups>
-  <buttongroup name="buttonGroup_3"/>
-  <buttongroup name="buttonGroup_4"/>
   <buttongroup name="buttonGroup"/>
   <buttongroup name="buttonGroup_2"/>
+  <buttongroup name="buttonGroup_3"/>
+  <buttongroup name="buttonGroup_4"/>
  </buttongroups>
 </ui>

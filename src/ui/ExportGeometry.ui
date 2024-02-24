@@ -749,101 +749,6 @@
                      <height>23</height>
                     </size>
                    </property>
-                   <item>
-                    <property name="text">
-                     <string>Select Surface Type</string>
-                    </property>
-                   </item>
-                   <item>
-                    <property name="text">
-                     <string>openmc.Plane</string>
-                    </property>
-                   </item>
-                   <item>
-                    <property name="text">
-                     <string>openmc.XPlane</string>
-                    </property>
-                   </item>
-                   <item>
-                    <property name="text">
-                     <string>openmc.YPlane</string>
-                    </property>
-                   </item>
-                   <item>
-                    <property name="text">
-                     <string>openmc.ZPlane</string>
-                    </property>
-                   </item>
-                   <item>
-                    <property name="text">
-                     <string>openmc.Sphere</string>
-                    </property>
-                   </item>
-                   <item>
-                    <property name="text">
-                     <string>openmc.XCylinder</string>
-                    </property>
-                   </item>
-                   <item>
-                    <property name="text">
-                     <string>openmc.YCylinder</string>
-                    </property>
-                   </item>
-                   <item>
-                    <property name="text">
-                     <string>openmc.ZCylinder</string>
-                    </property>
-                   </item>
-                   <item>
-                    <property name="text">
-                     <string>openmc.Cone</string>
-                    </property>
-                   </item>
-                   <item>
-                    <property name="text">
-                     <string>openmc.XCone</string>
-                    </property>
-                   </item>
-                   <item>
-                    <property name="text">
-                     <string>openmc.YCone</string>
-                    </property>
-                   </item>
-                   <item>
-                    <property name="text">
-                     <string>openmc.ZCone</string>
-                    </property>
-                   </item>
-                   <item>
-                    <property name="text">
-                     <string>openmc.Quadric</string>
-                    </property>
-                   </item>
-                   <item>
-                    <property name="text">
-                     <string>openmc.XTorus</string>
-                    </property>
-                   </item>
-                   <item>
-                    <property name="text">
-                     <string>openmc.YTorus</string>
-                    </property>
-                   </item>
-                   <item>
-                    <property name="text">
-                     <string>openmc.ZTorus</string>
-                    </property>
-                   </item>
-                   <item>
-                    <property name="text">
-                     <string>hexagonal_prism</string>
-                    </property>
-                   </item>
-                   <item>
-                    <property name="text">
-                     <string>rectangular_prism</string>
-                    </property>
-                   </item>
                   </widget>
                  </item>
                  <item row="1" column="2">
@@ -1693,7 +1598,7 @@
                   </spacer>
                  </item>
                  <item>
-                  <widget class="QPushButton" name="pushButton_6">
+                  <widget class="QPushButton" name="Add_Lat_PB">
                    <property name="text">
                     <string>Add RectLattice &gt;&gt;</string>
                    </property>
@@ -2700,7 +2605,7 @@
   <tabstop>textEdit</tabstop>
   <tabstop>Reset_PB</tabstop>
   <tabstop>undo_PB</tabstop>
-  <tabstop>pushButton_6</tabstop>
+  <tabstop>Add_Lat_PB</tabstop>
   <tabstop>A_LE</tabstop>
   <tabstop>C_LE</tabstop>
   <tabstop>D_LE</tabstop>

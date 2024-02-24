@@ -7,8 +7,8 @@ from PyQt5.QtCore import *
 from PyQt5.QtWidgets import *
 from PyQt5.QtGui import *
 from PyQt5 import uic
-from src.PyEdit import myEditor # added
 from src.syntax_py import Highlighter
+from src.PyEdit import TextEdit, NumberBar  
 
 class EmittingStream(QtCore.QObject):
     textWritten = QtCore.pyqtSignal(str)
@@ -61,11 +61,17 @@ class ExportPlots(QWidget):
             item.setEnabled(True)
         for item in [self.Z_Width_LE, self.Z_Pixels_LE]:
             item.setEnabled(False)
+
         # add new editor
-        self.win = myEditor()
-        self.EditorLayout.addWidget(self.win)
-        self.cursor = self.win.editor.textCursor()
-        self.plainTextEdit = self.win.editor
+        self.plainTextEdit = TextEdit()
+        self.plainTextEdit.setWordWrapMode(QTextOption.NoWrap)
+        self.numbers = NumberBar(self.plainTextEdit)
+        layoutH = QHBoxLayout()
+        #layoutH.setSpacing(1.5)
+        layoutH.addWidget(self.numbers)
+        layoutH.addWidget(self.plainTextEdit)
+        self.EditorLayout.addLayout(layoutH, 0, 0)
+        
         sys.stdout = EmittingStream(textWritten=self.normalOutputWritten)
         #sys.stderr = EmittingStream(textWritten=self.normalOutputWritten)
         # to show window at the middle of the screen and resize it to the screen size

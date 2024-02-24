@@ -7,7 +7,7 @@ from PyQt5.QtWidgets import *
 from PyQt5.QtGui import *
 from PyQt5 import uic
 from src.syntax_py import Highlighter
-from src.PyEdit import myEditor # added
+from src.PyEdit import TextEdit, NumberBar  
 
 class EmittingStream(QtCore.QObject):
     textWritten = QtCore.pyqtSignal(str)
@@ -73,8 +73,8 @@ class ExportTallies(QWidget):
         self.list_of_surfaces_ids = []
         self.universe_name_list = univ
         self.materials_name_list = mat
-        self.Model_Elements_List = elements
-        self.Model_Nuclides_List = nuclides
+        self.Model_Elements_List = [elm for elm in elements]
+        self.Model_Nuclides_List = [nucl for nucl in nuclides]
         self.Filter_Bins_List = []
         self.Filters_List = []
         self.Nuclides_Bins_List = []
@@ -106,6 +106,7 @@ class ExportTallies(QWidget):
         self.Use_AllItems = False
 
         self.Nuclides_CB.clear()
+        self.Create_New_Tally = False
 
         # define diffrent estimators, filters, meshes, scores, ..
         self.Inicialize_Tallies()
@@ -115,10 +116,15 @@ class ExportTallies(QWidget):
             item.hide()
 
         # add new editor
-        self.win = myEditor()
-        self.EditorLayout.addWidget(self.win)
-        self.cursor = self.win.editor.textCursor()
-        self.plainTextEdit = self.win.editor
+        self.plainTextEdit = TextEdit()
+        self.plainTextEdit.setWordWrapMode(QTextOption.NoWrap)
+        self.numbers = NumberBar(self.plainTextEdit)
+        layoutH = QHBoxLayout()
+        #layoutH.setSpacing(1.5)
+        layoutH.addWidget(self.numbers)
+        layoutH.addWidget(self.plainTextEdit)
+        self.EditorLayout.addLayout(layoutH, 0, 0)
+        
         sys.stdout = EmittingStream(textWritten=self.normalOutputWritten)
         # sys.stderr = EmittingStream(textWritten=self.normalOutputWritten)
         # to show window at the middle of the screen and resize it to the screen size
@@ -245,7 +251,7 @@ class ExportTallies(QWidget):
                         'EnergyFilter', 'EnergyoutFilter', 'MuFilter', 'PolarFilter', 'AzimuthalFilter',
                         'DistribcellFilter', 'DelayedGroupFilter', 'EnergyFunctionFilter', 'LegendreFilter',
                         'SpatialLegendreFilter', 'SphericalHarmonicsFilter', 'ZernikeFilter', 'ZernikeRadialFilter',
-                        'ParticleFilter']
+                        'ParticleFilter', 'TimeFilter']
         # Possible meshes
         MESH_TYPES = ['RegularMesh', 'RectilinearMesh', 'CylindricalMesh', 'SphericalMesh', 'UnstructuredMesh']
         # Possible scores
@@ -266,7 +272,7 @@ class ExportTallies(QWidget):
                         'Energy_filter', 'Energyout_filter', 'Mu_filter', 'Polar_filter', 'Azimuthal_filter',
                         'Distribcell_filter', 'DelayedGroup_filter', 'EnergyFunction_filter', 'Legendre_filter',
                         'SpatialLegendre_filter', 'SphericalHarmonics_filter', 'Zernike_filter', 'ZernikeRadial_filter',
-                        'Particle_filter']
+                        'Particle_filter', 'Time_filter']
 
         if self.AddTallyId_CB.isChecked():
             self.Tally_LE.setText(self.tally_suffix + str(self.TallyId_LE.text()))
@@ -287,7 +293,7 @@ class ExportTallies(QWidget):
                               'PolarFilter': [], 'AzimuthalFilter': [], 'DelayedGroupFilter': [],
                               'EnergyFunctionFilter': [], 'LegendreFilter': [], 'SpatialLegendreFilter': [],
                               'SphericalHarmonicsFilter': [], 'ZernikeFilter': [], 'ZernikeRadialFilter': [],
-                              'ParticleFilter': []}
+                              'ParticleFilter': [], 'TimeFilter': []}
 
         self.MGX_GROUP_STRUCTURES_LIST = ['Select Structure', 'CASMO-2', 'CASMO-4', 'CASMO-8', 'CASMO-16', 'CASMO-25', 'CASMO-40', 'VITAMIN-J-42', 'CASMO-70',
                                 'XMAS-172', 'VITAMIN-J-175', 'TRIPOLI-315,', 'SHEM-361', 'CCFE-709', 'UKAEA-1102']
@@ -300,6 +306,7 @@ class ExportTallies(QWidget):
         if self.Model_Nuclides_List:
             self.Nuclides_CB.addItems(['Select Nuclide', 'Add all nuclides'])
             self.Nuclides_CB.addItems(self.Model_Nuclides_List)
+        #print(self.Model_Nuclides_List)
         # Filling SCORES combobox
         self.FluxScores_CB.addItems(self.FlUX_SCORES)
         self.RxnRates_CB.addItems(self.REACTION_SCORES)
@@ -326,8 +333,6 @@ class ExportTallies(QWidget):
                 self.Tally_LE.setText(self.Tally_LE.text().rstrip(string.digits) + str(self.Tally_ID))
             else:
                 self.Tally_LE.setText(self.Tally_LE.text().rstrip(string.digits))
-        else:
-            pass
 
     def sync_filter_name(self):
         import string
@@ -343,8 +348,6 @@ class ExportTallies(QWidget):
             else:
                 self.filter_suffix = self.FilterName_LE.text().rstrip(string.digits)
                 self.FilterName_LE.setText(self.filter_suffix)
-        else:
-            pass
 
     def sync_mesh_name(self):
         import string
@@ -360,10 +363,9 @@ class ExportTallies(QWidget):
             else:
                 self.mesh_suffix = self.MeshName_LE.text().rstrip(string.digits)
                 self.MeshName_LE.setText(self.mesh_suffix)
-        else:
-            pass
 
     def Add_Tallies(self):
+        self.Create_New_Tally = True
         self.Def_Tallies()
         if self.Tally_LE.text() == '':
             self.showDialog('Warning', 'Cannot create tally, enter name first !')
@@ -377,7 +379,7 @@ class ExportTallies(QWidget):
             if self.Tally_LE.text() in self.tally_name_list:
                 self.showDialog('Warning', 'Tally name already used, enter new name !')
                 return
-            elif self.TallyId_LE.text() in self.tally_id_list:
+            elif int(self.TallyId_LE.text()) in self.tally_id_list:
                 self.showDialog('Warning', 'Tally id already used, enter new id !')
                 return
             else:
@@ -486,12 +488,13 @@ class ExportTallies(QWidget):
                 if self.MeshName_LE.text() in self.mesh_name_list:
                     self.showDialog('Warning', 'Mesh name already used, select new name !')
                     return
-                elif self.MeshId_LE.text() in self.mesh_id_list:
+                elif int(self.MeshId_LE.text()) in self.mesh_id_list:
                     self.showDialog('Warning', 'Mesh id already used, select new id !')
                     return
                 else:
                     if self.Mesh_LE_1.text() == '' or self.Mesh_LE_2.text() == '' or self.Mesh_LE_3.text() == '':
                         self.showDialog('Warning', 'Mesh data are missing ! Complete the form !')
+                        return
                     else:
                         if self.MeshType_CB.currentIndex() == 1:
                             self.RegularMesh()
@@ -532,6 +535,7 @@ class ExportTallies(QWidget):
         if LL > UR:
             self.showDialog('Warning', 'Upper_right must be greater than Lower_left !')
             self.No_Error = False
+            return
         if self.Mesh_1D.isChecked():
             if len(dimension) != 1:
                 self.showDialog('Warning', 'Length of dimension list is not compatible with 1D mesh !')
@@ -775,6 +779,10 @@ class ExportTallies(QWidget):
 
     def Create_Filters(self):
         self.Def_Tallies()
+        if self.FilterType_CB.currentIndex() == 0:
+            self.showDialog('Warning', 'Select Filter type first !')
+            self.sync_filter_id()
+            return        
         if self.FilterName_LE.text() == '':
             self.showDialog('Warning', 'Cannot create filter, select name first !')
             return
@@ -790,12 +798,9 @@ class ExportTallies(QWidget):
         if self.FilterType_CB.currentIndex() != 24:
             bins = self.Filter_Bins_List_LE.text().replace("'", "").replace('[', '').replace(']', '')
             self.Filter_Bins_List_LE.setText(bins)
-        if self.FilterType_CB.currentIndex() == 0:
-            self.showDialog('Warning', 'Select Filter type first !')
-            self.sync_filter_id()
-            return
 
-        if self.FilterType_CB.currentIndex() in [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 16]:
+
+        if self.FilterType_CB.currentIndex() in [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 16, 25]:
             if self.Filter_Bins_List_LE.text() == '':
                 self.showDialog('Warning', 'No filter bins selected')
                 return
@@ -812,7 +817,7 @@ class ExportTallies(QWidget):
                         else:
                             self.Filter_Bins_List_LE.clear()
                         return
-                elif self.FilterType_CB.currentIndex() == 7:
+                elif self.FilterType_CB.currentIndex() in [7, 25]:
                     bins = list(set(map(int, bins)))
             bins.sort()
             if self.FilterType_CB.currentIndex() not in [6, 9, 16]:
@@ -923,14 +928,15 @@ class ExportTallies(QWidget):
             print(self.MGX_CB.currentText() + 'min = ', self.Start_LE.text())
             print(self.MGX_CB.currentText() + 'max = ', self.End_LE.text())
             print(self.FilterName_LE.text() + ' = openmc.' + self.FilterType_CB.currentText() + '(order= ' + self.GrpNumber_LE.text()
-                  + ", '" + self.MGX_CB.currentText() + "', " + self.MGX_CB.currentText() + 'min' + ', ' + self.MGX_CB.currentText() + 'max'
-                  + ', filter_id=' + self.FilterId_LE.text() + ')')
+                  + ", '" + self.MGX_CB.currentText() + "', axis=" + self.MGX_CB.currentText() + 'minimum= min' + ', ' 
+                  + self.MGX_CB.currentText() + 'maximum= max' + ', filter_id=' + self.FilterId_LE.text() + ')')
         elif self.FilterType_CB.currentIndex() in [22, 23]:
             if self.Start_LE.text() == '' or self.End_LE.text() == '' or self.GrpNumber_LE.text() == '' or self.Filter_Bins_List_LE.text() == '':
                 self.showDialog('Warning', 'Enter data first !')
+                return
             else:
                 print(self.FilterName_LE.text() + ' = openmc.' + self.FilterType_CB.currentText() + '(order= ' + self.Filter_Bins_List_LE.text()
-                    + ", x0= " + self.Start_LE.text() + ", y0= " + self.End_LE.text() + ', r= ' + self.GrpNumber_LE.text() +
+                    + ", x= " + self.Start_LE.text() + ", y= " + self.End_LE.text() + ', r= ' + self.GrpNumber_LE.text() +
                       ', filter_id=' + self.FilterId_LE.text() + ')')
         elif self.FilterType_CB.currentIndex() == 24:
             print(self.FilterName_LE.text() + ' = openmc.' + self.FilterType_CB.currentText() + '(' +
@@ -1110,9 +1116,6 @@ class ExportTallies(QWidget):
             self.Filter_Bins_List_LE.setText(self.MGX_CB.currentText())
 
     def Show_Hide_Widgets(self):
-        #self.validator = QRegExpValidator(QRegExp(r'[0-9eE-.]+'))  # QDoubleValidator(0.000000, 11.111111, 2)
-        '''for LineEd in [self.Start_LE, self.End_LE]:
-            LineEd.setValidator(self.validator)'''
         self.Filter_Bins_List_LE.show()
         self.Filter_Bins_List_LE.clear()
         self.Undo_PB.show()
@@ -1188,8 +1191,6 @@ class ExportTallies(QWidget):
             self.label_10.setText('y')
             self.label.setText('radius')
             self.Filter_Bins_List_LE.setValidator(self.int_validator)
-            '''self.Start_LE.setValidator(QDoubleValidator(self))
-            self.End_LE.setValidator(QDoubleValidator(self))'''
             self.GrpNumber_LE.setValidator(QDoubleValidator(self))
         else:
             for item in [self.MGX_CB, self.label, self.label_8, self.label_10, self.Start_LE, self.End_LE,
@@ -1251,13 +1252,30 @@ class ExportTallies(QWidget):
 
     def Add_Filters_Bins_To_Tally(self):
         if self.Filters_List_LE.text():
+            if not self.Create_New_Tally and self.tally_name_list:
+                qm = QMessageBox
+                ret = qm.question(self, 'Warning', 'No new tally created. Tally ' + self.tally_name_list[-1] +  ' will be modified! proceed?', qm.Yes | qm.No)
+                if ret == qm.No:
+                    return
+
             if self.tally_name_list:
-                print(self.tally_name_list[-1] + '.filters += ' + self.Filters_List_LE.text().replace("'", ""))
+                document = self.plainTextEdit.toPlainText()
+                lines = document.split('\n')
+                for line in lines:
+                    if (self.tally_name_list[-1] + ".filters" in line):
+                        lines.remove(line)
+                        document = self.plainTextEdit.toPlainText().replace(line,"")
+                self.plainTextEdit.clear()
+                self.plainTextEdit.insertPlainText(document)
+                print(self.tally_name_list[-1] + '.filters = ' + self.Filters_List_LE.text().replace("'", ""))
+            else:
+                self.showDialog('Warning', 'Add tally first !')
         else:
             self.showDialog('Warning', 'Choose filters to add first !')
             return
         self.Filters_List_CB.setCurrentIndex(0)
         self.Filters_List_LE.clear()
+        self.Reset(self.Filters_List, self.Filters_List_LE)
 
     def LE_to_List(self, LineEdit):
         self.List = []
@@ -1272,29 +1290,67 @@ class ExportTallies(QWidget):
         if self.Nuclides_Bins_List_LE.text() == '':
             self.showDialog('Warning', 'No Nuclide selected !')
             return
-        else:
-            nuclides = self.Nuclides_Bins_List_LE.text()
-            if self.tally:
-                print(self.tally + '.nuclides = ' + nuclides)
-                self.Nuclides_Bins_List_LE.clear()
-            else:
-                self.showDialog('Warning', 'Add tally first !')
+        if not self.Create_New_Tally and self.tally_name_list:
+            qm = QMessageBox
+            ret = qm.question(self, 'Warning', 'No new tally created. Tally ' + self.tally_name_list[-1] +  ' will be modified! proceed?', qm.Yes | qm.No)
+            if ret == qm.No:
                 return
+
+        Nuclides = self.Nuclides_Bins_List_LE.text()
+        nuclides_list = Nuclides[Nuclides.find("[") + 1: Nuclides.find("]")].replace("'","").replace(" ","").split(',')
+        
+        if self.tally_name_list:
+            document = self.plainTextEdit.toPlainText()
+            lines = document.split('\n')
+            for line in lines:
+                if (".nuclides" in line):
+                    lines.remove(line)
+                    document = self.plainTextEdit.toPlainText().replace(line,"")
+            self.plainTextEdit.clear()
+            self.plainTextEdit.insertPlainText(document)
+            for item in nuclides_list:
+                if item not in self.Model_Nuclides_List:
+                    self.showDialog('Warning', item + ' not in list of nuclides in the model!')
+                    return
+            print(self.tally_name_list[-1] + '.nuclides = ' + Nuclides)
+            self.Nuclides_Bins_List_LE.clear()
+        else:
+            self.showDialog('Warning', 'Add tally first !')
+            return
+        self.Reset(self.Nuclides_Bins_List, self.Nuclides_Bins_List_LE)
 
     def Add_Scores(self):
         if self.ScoresList_LE.text() == '':
             self.showDialog('Warning', 'No score to add !')
             return
-        else:
-            scores = self.ScoresList_LE.text()
-            if self.tally:
-                print(self.tally + '.scores = ' + scores )
-                if self.Estimator_CB.currentIndex()!= 0:
-                    print(self.tally + '.estimator = ' + "'" + str(self.Estimator_CB.currentText() + "'"))
-                self.ScoresList_LE.clear()
-            else:
-                self.showDialog('Warning', 'Add tally first !')
+        if not self.Create_New_Tally and self.tally_name_list:
+            qm = QMessageBox
+            ret = qm.question(self, 'Warning', 'No new tally created. Tally ' + self.tally_name_list[-1] +  ' will be modified! proceed?', qm.Yes | qm.No)
+            if ret == qm.No:
                 return
+
+        scores = self.ScoresList_LE.text()
+        if self.tally_name_list:
+            document = self.plainTextEdit.toPlainText()
+            lines = document.split('\n')
+            for line in lines:
+                if (".scores" in line):
+                    lines.remove(line)
+                    document = self.plainTextEdit.toPlainText().replace(line,"")
+            self.plainTextEdit.clear()
+            self.plainTextEdit.insertPlainText(document)
+            print(self.tally_name_list[-1] + '.scores = ' + scores )
+            if self.Estimator_CB.currentIndex()!= 0:
+                print(self.tally_name_list[-1] + '.estimator = ' + "'" + str(self.Estimator_CB.currentText() + "'"))
+            self.ScoresList_LE.clear()
+            self.FluxScores_CB.setCurrentIndex(0)
+            self.RxnRates_CB.setCurrentIndex(0)
+            self.PartProduction_CB.setCurrentIndex(0)
+            self.MiscScores_CB.setCurrentIndex(0)
+        else:
+            self.showDialog('Warning', 'Add tally first !')
+            return
+        self.Reset(self.Scores_List, self.ScoresList_LE)
 
     def DEF_FluxScores(self):
         self.Use_AllItems = False
@@ -1368,7 +1424,6 @@ class ExportTallies(QWidget):
         else:
             if 'import numpy' in self.plainTextEdit.toPlainText():
                 self.Suppress_Line('import numpy', self.plainTextEdit)
-
             self.v_1.moveCursor(QTextCursor.End)
             if self.Tallies_Tab.currentIndex() == 1:
                 print('\ntallies.append(' + self.tally + ')')
@@ -1384,13 +1439,22 @@ class ExportTallies(QWidget):
             else:
                 #if self.Tallies_Tab.currentIndex() == 1:
                 print('\n' + string_to_find)
+                
                 document = self.v_1.toPlainText().replace(string_to_find, self.plainTextEdit.toPlainText())
                 self.v_1.clear()
-
                 cursor = self.v_1.textCursor()
                 cursor.insertText(document)
+
+                '''if 'DistribcellFilter' in self.v_1.toPlainText():
+                    self.showDialog('', 'Distribcell')
+                    self.Find_string(self.v_1, "import openmc.lib")
+                    if self.Insert_Header:
+                        cursor.setPosition(0)
+                        cursor.insertText('import openmc.lib\n')'''
+
             self.text_inserted = True
             self.plainTextEdit.clear()
+            self.Create_New_Tally = False
 
     def Suppress_Line(self, item, TextEdit):
         text = TextEdit.toPlainText()

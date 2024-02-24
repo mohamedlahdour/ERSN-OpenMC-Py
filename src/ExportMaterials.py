@@ -10,14 +10,21 @@ from PyQt5 import uic
 from PyQt5 import QtCore, QtGui, QtWidgets
 import src.materials
 import src.Mixture_pnnl
-from src.PyEdit import myEditor, TextEdit, NumberBar  # added
+from src.PyEdit import TextEdit, NumberBar  
 from src.syntax_py import Highlighter
-        
+
 class ExportMaterials(QWidget):
     from .func import resize_ui, showDialog, Exit
-    def __init__(self, v_1, available_xs, mat, mat_id, Model_Nuclides, parent=None):
+    def __init__(self, v_1, available_xs, mat, mat_id, parent=None):
         super(ExportMaterials, self).__init__(parent)
         uic.loadUi("src/ui/ExportMaterials.ui", self)  
+        try:
+            from openmc import __version__
+            self.openmc_version = int(__version__.split('-')[0].replace('.', ''))
+        except:
+            self.showDialog('Warning', 'OpenMC not yet installed !')
+            self.openmc_version = 0
+ 
         #sys.stdout = EmittingStream(textWritten=self.normalOutputWritten)
         #sys.stderr = EmittingStream(textWritten=self.normalOutputWritten)
         #self.Liste1 = [self.Nucl_Modif_RB, self.Nucl_Add_RB, self.Nuclide_CB, self.Percent_Nuclide_LE,
@@ -40,20 +47,16 @@ class ExportMaterials(QWidget):
             LE.setValidator(self.validator)
         self.v_1 = v_1
         self._initButtons()
-
-       # add new editor
-        '''self.win = myEditor()
-        self.EditorLayout.addWidget(self.win)
-        self.cursor = self.win.editor.textCursor()
-        self.plainTextEdit = self.win.editor'''
-
+        
+        # add new editor
         self.plainTextEdit = TextEdit()
+        self.plainTextEdit.setWordWrapMode(QTextOption.NoWrap)
         self.numbers = NumberBar(self.plainTextEdit)
         layoutH = QHBoxLayout()
-        layoutH.setSpacing(1.5)
+        #layoutH.setSpacing(1.5)
         layoutH.addWidget(self.numbers)
         layoutH.addWidget(self.plainTextEdit)
-        self.EditorLayout_1.addLayout(layoutH, 0, 0)
+        self.EditorLayout.addLayout(layoutH, 0, 0)
         #self.cursor = self.plainTextEdit.textCursor()
 
         sys.stdout = EmittingStream(textWritten=self.normalOutputWritten)
@@ -101,7 +104,6 @@ class ExportMaterials(QWidget):
         self.Materials_In_Model = {}
         self.Elements_In_Material = {}
         self.Nuclides_In_Material = {}
-        self.Model_Nuclides_List = Model_Nuclides
         # self.Materials_In_Model[self.Mat_Name][self.Elements_In_Material]
         # self.Materials_In_Model[self.Mat_Name][self.Elements_In_Material][self.Element_Percent]
         # self.Materials_In_Model[self.Mat_Name][self.Elements_In_Material][self.Element_Percent_Type]
@@ -151,6 +153,14 @@ class ExportMaterials(QWidget):
             self.Mixture_CB.addItem(value[0])
         self.Mixture_CB.setToolTip("Data are derived from Compendium of Material Composition Data for Radiation Transport Modeling, Revision 1, "
                                    "PNNL-15870 Rev. 1,  March 2001")
+        self.Enrichment_Target_CB.setToolTip("There is a special procedure, in openMC version +0.14, for enrichment of U235 in U. To invoke it, "
+                                             "the arguments 'enrichment_target'and 'enrichment_type' should be omitted. Provide a value only for 'enrichment' in weight percent.")
+        self.Enrichment_Type_CB.setToolTip("There is a special procedure, in openMC version +0.14, for enrichment of U235 in U. To invoke it, "
+                                             "the arguments 'enrichment_target'and 'enrichment_type' should be omitted. Provide a value only for 'enrichment' in weight percent.")
+        self.comboBox_7.setToolTip("There is a special procedure, in openMC version +0.14, for enrichment of U235 in U. To invoke it, "
+                                             "the arguments 'enrichment_target'and 'enrichment_type' should be omitted. Provide a value only for 'enrichment' in weight percent.")
+        self.comboBox_8.setToolTip("There is a special procedure, in openMC version +0.14, for enrichment of U235 in U. To invoke it, "
+                                             "the arguments 'enrichment_target'and 'enrichment_type' should be omitted. Provide a value only for 'enrichment' in weight percent.")
 
         # to show window at the middle of the screen and resize it to the screen size
         self.resize_ui()
@@ -186,11 +196,11 @@ class ExportMaterials(QWidget):
         self.Suppress_Component_PB.clicked.connect(self.Suppress_Component)
 
     def Increment_Mat_Id(self):
-        if self.materials_id_list:
-            n = 0  #int(self.materials_id_list[-1])
+        if self.materials_id_list: #len(self.materials_id_list) > 0:
+            n = int(self.materials_id_list[-1]) + 1
             while True:
-                if str(n + 1) not in self.materials_id_list:
-                    self.material_id = n + 1
+                if n not in self.materials_id_list :
+                    self.material_id = n
                     break
                 else:
                     n += 1
@@ -267,10 +277,6 @@ class ExportMaterials(QWidget):
             self.Element_Supp_List_CB.clear()
             self.Mat_To_Suppress_List_CB.clear()
             self.Mat_To_Suppress_List_CB.addItem('Select Material')
-            '''for item in self.Liste1:
-                item.setEnabled(False)
-            for item in self.Liste2:
-                item.setEnabled(False)'''
         if self.materials_name_list:
             self.Mat_List_CB.addItems(sorted(self.materials_name_list))
             self.Mat_To_Suppress_List_CB.addItems(sorted(self.materials_name_list))
@@ -299,8 +305,8 @@ class ExportMaterials(QWidget):
             self.Nuclide_CB.clear()
             if self.materials_name_list:
                 if self.Mat_List_CB.currentIndex() >= 1:
-                    Mat_Name = self.Mat_List_CB.currentText()  #self.materials_name_list[self.Mat_List_CB.currentIndex() -1]
-                    Mat_Id = self.materials_id_list[self.materials_name_list.index(Mat_Name)]   #self.materials_id_list[self.Mat_List_CB.currentIndex() -1]
+                    Mat_Name = self.Mat_List_CB.currentText()  
+                    Mat_Id = self.materials_id_list[self.materials_name_list.index(Mat_Name)]   
                     self.Mat_Name = Mat_Name
                     self.Mat_Id = Mat_Id
                     self.Mat_ID_LE.setText(str(Mat_Id))
@@ -374,8 +380,12 @@ class ExportMaterials(QWidget):
         if self.Mat_List_CB.currentIndex() >= 1:
             if self.Nucl_Modif_RB.isChecked():    # modify existing nuclide
                 self.Clear_plainTextEdit(self.Mat_Name)
-                print('\n' + self.Mat_Name, "= openmc.Material(material_id=" + str(self.Mat_ID_LE.text()) +
-                      ", name='" + self.Mat_List_CB.currentText() + "',", "temperature=", str(self.Temp_LE.text()), ')')
+                if self.Temp_LE.text():
+                    print('\n' + self.Mat_Name, "= openmc.Material(material_id=" + str(self.Mat_ID_LE.text()) +
+                        ", name='" + self.Mat_List_CB.currentText() + "',", "temperature=", str(self.Temp_LE.text()), ')')
+                else:
+                    print('\n' + self.Mat_Name, "= openmc.Material(material_id=" + str(self.Mat_ID_LE.text()) +
+                        ", name='" + self.Mat_List_CB.currentText() + "'", ')')
                 print(self.Mat_Name + '.set_density(' + "'" + self.Density_Unit_CB.currentText() + "',",
                       self.Density_LE.text() + ")")
                 if self.Mat_Nuclide_List[self.Mat_Name]:
@@ -383,8 +393,12 @@ class ExportMaterials(QWidget):
 
             elif self.Elm_Modif_RB.isChecked():  # modify existing element
                 self.Clear_plainTextEdit(self.Mat_Name)
-                print('\n' + self.Mat_Name, "= openmc.Material(material_id=" + str(self.Mat_ID_LE.text()) +
-                      ", name='" + self.Mat_List_CB.currentText() + "',", "temperature=", str(self.Temp_LE.text()) + ')')
+                if self.Temp_LE.text():
+                    print('\n' + self.Mat_Name, "= openmc.Material(material_id=" + str(self.Mat_ID_LE.text()) +
+                        ", name='" + self.Mat_List_CB.currentText() + "',", "temperature=", str(self.Temp_LE.text()) + ')')
+                else:
+                    print('\n' + self.Mat_Name, "= openmc.Material(material_id=" + str(self.Mat_ID_LE.text()) +
+                        ", name='" + self.Mat_List_CB.currentText() + "'" + ')')
                 print(self.Mat_Name + '.set_density(' + "'" + self.Density_Unit_CB.currentText() + "',",
                       self.Density_LE.text() + ")")
                 if self.Mat_Element_List[self.Mat_Name]:
@@ -427,16 +441,22 @@ class ExportMaterials(QWidget):
                 fraction_type = self.Percent_Ele_Type_CB.currentText()
                 if self.Enricht_LE.text():
                     enrichment = self.Enricht_LE.text()
-                    if self.Enrichment_Target_CB.currentIndex() >= 0:    # not necessary
-                        enrichment_type = self.Enrichment_Type_CB.currentText()
-                        enrichment_target_list = self.Isotopes_In_Elements[element.replace("'", "")]
+                    #if self.Enrichment_Target_CB.currentIndex() >= 0:    # not necessary
+                    if element == 'U' and self.openmc_version > 141:
+                        enrichment_type = 'wo'
+                        enrichment_target = 'U235'
+                        #if self.Element_CB.currentIndex() != 0:
+                        print(self.Mat_Name + ".add_element(" + element + ", " + fraction + ", percent_type=" + "'" + fraction_type +
+                            "', enrichment=" + enrichment + "') ")
+                    else: 
                         enrichment_target = self.Enrichment_Target_CB.currentText()
-                        if self.Element_CB.currentIndex() != 0:
-                            print(self.Mat_Name + ".add_element(" + element + ", " + fraction + ", percent_type=" + "'" + fraction_type +
-                                "', enrichment=" + enrichment + ", enrichment_target='" + enrichment_target +
-                                "', enrichment_type='" + enrichment_type + "') ")
-                    else:
-                        return
+                        enrichment_type = self.Enrichment_Type_CB.currentText()
+                        
+                        #if self.Element_CB.currentIndex() != 0:
+                        print(self.Mat_Name + ".add_element(" + element + ", " + fraction + ", percent_type=" + "'" + fraction_type +
+                            "', enrichment=" + enrichment + ", enrichment_target='" + enrichment_target +
+                            "', enrichment_type='" + enrichment_type + "') ")
+                    enrichment_target_list = self.Isotopes_In_Elements[element.replace("'", "")]
                 else:
                     enrichment = ''
                     enrichment_target = ''
@@ -552,12 +572,18 @@ class ExportMaterials(QWidget):
                     fraction_type = self.Percent_Ele_Type_CB.currentText()
                     if self.Enricht_LE.text() != '':
                         enrichment = self.Enricht_LE.text()
-                        enrichment_type = self.Enrichment_Type_CB.currentText()
-                        enrichment_target = self.Enrichment_Target_CB.currentText()
+                        if element == 'U' and self.openmc_version >= 141:
+                            enrichment_target = 'U235'
+                            enrichment_type = 'wo'
+                            print(self.Mat_Name + ".add_element(" + element + ", " + fraction + ", percent_type=" + "'" + fraction_type +
+                                "', enrichment=" + enrichment + "') ")
+                        else:
+                            enrichment_type = self.Enrichment_Type_CB.currentText()
+                            enrichment_target = self.Enrichment_Target_CB.currentText()
+                            print(self.Mat_Name + ".add_element(" + element + ", " + fraction + ", percent_type=" + "'" + fraction_type +
+                                "', enrichment=" + enrichment + ", enrichment_target='" + enrichment_target +
+                                "', enrichment_type='" + enrichment_type + "') ")
                         enrichment_target_list = self.Isotopes_In_Elements[element.replace("'", "")]
-                        print(self.Mat_Name + ".add_element(" + element + ", " + fraction + ", percent_type=" + "'" + fraction_type +
-                            "', enrichment=" + enrichment + ", enrichment_target='" + enrichment_target +
-                            "', enrichment_type='" + enrichment_type + "') ")
                     else:
                         enrichment = ''
                         enrichment_target = ''
@@ -569,6 +595,7 @@ class ExportMaterials(QWidget):
                     self.Elements_In_Material[element]['Enrichment'] = enrichment
                     self.Elements_In_Material[element]['Enrichment_target'] = enrichment_target
                     self.Elements_In_Material[element]['Enrichment_type'] = enrichment_type
+
                 self.Enricht_LE.setText('')
                 self.Store_Material_Elements_Info(element, fraction, fraction_type, enrichment, enrichment_target_list,
                                                   enrichment_target, enrichment_type)
@@ -577,19 +604,26 @@ class ExportMaterials(QWidget):
         if self.Mat_Nuclide_List[self.Mat_Name]:
             for nuclide in self.Mat_Nuclide_List[self.Mat_Name]:
                 self.paste_not_modified_nuclides(nuclide)
-
+        
     def paste_not_modified_elements(self, element):
         fraction = self.Elements_In_Material[element]['Fraction']
         fraction_type = self.Elements_In_Material[element]['Fraction_type']
         if self.Elements_In_Material[element]['Enrichment']:
             enrichment = self.Elements_In_Material[element]['Enrichment']
             enrichment_target_list = self.Isotopes_In_Elements[element.replace("'", "")]
-            enrichment_target = self.Elements_In_Material[element]['Enrichment_target'].replace("'", "")
-            enrichment_type = self.Elements_In_Material[element]['Enrichment_type'].replace("'", "")
-            print(
-                self.Mat_Name + ".add_element(" + element + ", " + fraction + ", percent_type=" + "'" + fraction_type +
-                "', enrichment=" + enrichment + ", enrichment_target='" + enrichment_target +
-                "', enrichment_type='" + enrichment_type + "') ")
+            if element == 'U' and self.openmc_version >= 141:
+                enrichment_target = 'U235'
+                enrichment_type = 'wo'
+                print(
+                    self.Mat_Name + ".add_element(" + element + ", " + fraction + ", percent_type=" + "'" + fraction_type +
+                    "', enrichment=" + enrichment + "') ")
+            else:    
+                enrichment_target = self.Elements_In_Material[element]['Enrichment_target'].replace("'", "")
+                enrichment_type = self.Elements_In_Material[element]['Enrichment_type'].replace("'", "")
+                print(
+                    self.Mat_Name + ".add_element(" + element + ", " + fraction + ", percent_type=" + "'" + fraction_type +
+                    "', enrichment=" + enrichment + ", enrichment_target='" + enrichment_target +
+                    "', enrichment_type='" + enrichment_type + "') ")
         else:
             enrichment = ''
             enrichment_target = ''
@@ -785,7 +819,7 @@ class ExportMaterials(QWidget):
                                     target_item = self.Elements_In_Material[element]['Enrichment_target'].replace("'", "")
                                     index = self.Enrichment_Target_CB.findText(target_item, QtCore.Qt.MatchFixedString)
                                     self.Enrichment_Target_CB.setCurrentIndex(index)
-                                    target_type = self.Elements_In_Material[element]['Enrichment_target'].replace("'", "")
+                                    target_type = self.Elements_In_Material[element]['Enrichment_type'].replace("'", "")
                                     index = self.Enrichment_Type_CB.findText(target_type, QtCore.Qt.MatchFixedString)
                                     self.Enrichment_Type_CB.setCurrentIndex(index)
 
@@ -892,12 +926,16 @@ class ExportMaterials(QWidget):
                         for w in items:
                             if 'enrichment' in w:
                                 self.Enrichment = True
-                                if 'enrichment_target' in w:
-                                    self.Element_Enrichment_Target = w.split('=')[1]
-                                elif 'enrichment_type' in w:
-                                    self.Element_Enrichment_Type = w.split('=')[1]
+                                if self.Element_to_find == 'U' and self.openmc_version >= 141:
+                                    self.Element_Enrichment_Target = 'U235'
+                                    self.Element_Enrichment_Type = 'wo'
                                 else:
-                                    self.Element_Enrichment = w.split('=')[1]
+                                    if 'enrichment_target' in w:
+                                        self.Element_Enrichment_Target = w.split('=')[1]
+                                    elif 'enrichment_type' in w:
+                                        self.Element_Enrichment_Type = w.split('=')[1]
+                                    else:
+                                        self.Element_Enrichment = w.split('=')[1]
                             else:
                                 self.Enrichment = False
                                 self.Element_Enrichment = ''
@@ -921,7 +959,7 @@ class ExportMaterials(QWidget):
                             enrichment_type = self.Element_Enrichment_Type
                             enrichment_target_list = self.Isotopes_In_Elements[element.replace("'", "")]
                         self.Store_Material_Elements_Info(element, fraction, fraction_type, enrichment, enrichment_target_list, enrichment_target, enrichment_type)
-
+                        
     def Store_Materials_Info(self, Mat_Name, Mat_Id):
         # new dictionary filling : parent
         self.Materials_In_Model[Mat_Name] = {}
@@ -1030,8 +1068,6 @@ class ExportMaterials(QWidget):
             else:
                 self.material_suffix = self.lineEdit.text().rstrip(string.digits)
                 self.lineEdit.setText(self.material_suffix)
-        else:
-            pass
 
     def Find_string(self, text_window, string_to_find):
         self.current_line = ""
@@ -1071,7 +1107,7 @@ class ExportMaterials(QWidget):
             return
         else:
             Mat_Exists = False
-        if self.lineEdit_2.text() in self.materials_id_list:
+        if int(self.lineEdit_2.text()) in self.materials_id_list:
             self.showDialog('Warning', 'Material id already used, select new id !')
             Mat_Exists = True
             return
@@ -1164,10 +1200,13 @@ class ExportMaterials(QWidget):
                             self.nuclide_added = True
                 else:
                     self.showDialog('Warning', 'Cross sections for Nuclide ' + self.comboBox_3.currentText() + ' are not available in installed data !')
+                    return
             else:
                 self.showDialog('Warning', 'Select nuclide first !')
+                return
         else:
             self.showDialog('Warning', 'Add material first !')
+            return
         self.comboBox_3.setCurrentIndex(0)
         self.comboBox_4.setCurrentIndex(0)
         self.lineEdit_5.clear()
@@ -1245,14 +1284,20 @@ class ExportMaterials(QWidget):
                         return
                     else:
                         if self.lineEdit_7.text():
-                            if self.comboBox_7.currentIndex() >= 1:
-                                print(self.mat + ".add_element( '" + self.comboBox_5.currentText() + "', " +
+                            if self.comboBox_5.currentText() == 'U' and self.openmc_version >= 141:
+                                    print(self.mat + ".add_element( '" + self.comboBox_5.currentText() + "', " +
                                       self.lineEdit_6.text() + ", '" + self.comboBox_6.currentText() + "', enrichment=" +
-                                      self.lineEdit_7.text() + ", enrichment_target='" + self.comboBox_7.currentText() +
-                                      "', enrichment_type='" + self.comboBox_8.currentText() + "') ")
+                                      self.lineEdit_7.text() + "') ")
                             else:
-                                self.showDialog('Warning', 'Select enrichment target first !')
-                                return
+                                if self.comboBox_7.currentIndex() >= 1:
+                                    print(self.mat + ".add_element( '" + self.comboBox_5.currentText() + "', " +
+                                        self.lineEdit_6.text() + ", '" + self.comboBox_6.currentText() + "', enrichment=" +
+                                        self.lineEdit_7.text() + ", enrichment_target='" + self.comboBox_7.currentText() +
+                                        "', enrichment_type='" + self.comboBox_8.currentText() + "') ")
+                                else:
+                                    if self.comboBox_5.currentText() != 'U' and self.openmc_version >= 141:
+                                        self.showDialog('Warning', 'Select enrichment target first !')
+                                        return
                         else:
                             print(self.mat + ".add_element( '" + self.comboBox_5.currentText() + "', " +
                                   self.lineEdit_6.text() + ", '" + self.comboBox_6.currentText() + "')")
@@ -1260,8 +1305,10 @@ class ExportMaterials(QWidget):
                         self.element_added = True
             else:
                 self.showDialog('Warning', 'Select element first !')
+                return
         else:
             self.showDialog('Warning', 'Add material first !')
+            return
         self.comboBox_5.setCurrentIndex(0)
         self.comboBox_6.setCurrentIndex(0)
         self.comboBox_8.setCurrentIndex(0)
@@ -1280,7 +1327,7 @@ class ExportMaterials(QWidget):
         if self.lineEdit.text():
             self.liste.append(self.lineEdit.text())
 
-    def Export_to_Main_Window(self):                          # added by Tarek        >>>>>>>>>>>>>>>>>>
+    def Export_to_Main_Window(self):                          
         export_to_main_window = False
         self.v_1.moveCursor(QTextCursor.End)
         if self.plainTextEdit.toPlainText():

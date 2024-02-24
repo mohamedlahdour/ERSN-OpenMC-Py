@@ -72,6 +72,12 @@ class Application(QtWidgets.QMainWindow):
         #sys.stdout = EmittingStream(textWritten=self.normalOutputWritten)
         #sys.stderr = EmittingStream(textWritten=self.normalOutputWritten)
         #self.settings = QSettings("PyEdit", "Py_ERSN_OpenMC")
+        try:
+            from openmc import __version__
+            self.openmc_version = int(__version__.split('-')[0].replace('.', ''))
+        except:
+            self.showDialog('Warning', 'OpenMC not yet installed !')
+            self.openmc_version = 0
         self.title = title
         self.ui = uic.loadUi("src/ui/Interface.ui", self)
         self.new_File = False
@@ -89,7 +95,7 @@ class Application(QtWidgets.QMainWindow):
                                  'DistribcellFilter', 'CollisionFilter', 'EnergyFilter', 'EnergyoutFilter',
                                  'MuFilter', 'PolarFilter', 'AzimuthalFilter', 'DelayedGroupFilter', 'EnergyFunctionFilter',
                                  'LegendreFilter', 'SpatialLegendreFilter', 'SphericalHarmonicsFilter', 'ZernikeFilter',
-                                 'ZernikeRadialFilter', 'ParticleFilter']
+                                 'ZernikeRadialFilter', 'ParticleFilter', 'TimeFilter']
         self.Filters_key_sub_list = ['CellFilter', 'CellFromFilter', 'CellbornFilter', 'CellInstanceFilter']
 
         self.clear_Lists()
@@ -106,6 +112,11 @@ class Application(QtWidgets.QMainWindow):
         lines = open(f, 'r').read().split('\n')
         for line in lines:
             if 'neutron' in line:
+                item = line.split()
+                """if 'materials' in item and '=' in item:
+                    nuclide = item.strip('materials').strip('=').strip().replace('"','')
+                elif 'materials' in item and '=' not in item:
+                    nuclide = items[items.index(item) + 1].strip().replace('"','')"""
                 nuclide = line[line.find('materials') + 1: line.find('path')].split('=')[1].rstrip().replace('"', '')
                 self.Neutron_XS_List.append(nuclide)
             elif 'thermal' in line:
@@ -124,11 +135,9 @@ class Application(QtWidgets.QMainWindow):
         # Brackets ExtraSelection ...
         self.left_selected_bracket = QTextEdit.ExtraSelection()
         self.right_selected_bracket = QTextEdit.ExtraSelection()
-        #self.settings = QSettings("PyEdit", "PyEdit")
         self.fname = ""
         self.words = []
         self.root = QDir.currentPath()
-        #self.root = QFileInfo.path(QFileInfo(QCoreApplication.arguments()[0]))
         self.wordList = []
         self.appfolder = self.root
         self.openPath = ""
@@ -217,8 +226,7 @@ class Application(QtWidgets.QMainWindow):
         self.RunMode_CB.currentIndexChanged.connect(self.SetRunMode)
         self.radioButton.toggled.connect(self.RunPB_State)
         self.tabWidget.currentChanged.connect(self.Update_StatusBar)
-        #if not self.openedFiles:
-            #self.plainTextEdit_7.cursorPositionChanged.connect(self.detect_components)
+        # self.plainTextEdit_7.blockCountChanged.connect(self.detect_components)
         self.plainTextEdit_7.textChanged.connect(self.detect_components)
 
     def initUI(self):
@@ -577,6 +585,7 @@ class Application(QtWidgets.QMainWindow):
         self.toolsmenu.addAction(self.actionHelp)
 
     def editor_core(self):
+        from PyQt5.QtGui import QTextOption
         # add new editor for python window
         U_layout = QGridLayout()
         U_widgets = QWidget()
@@ -623,6 +632,7 @@ class Application(QtWidgets.QMainWindow):
         elif self.tabWidget.currentWidget().objectName() == 'tab_run':  # output window
             self.editor = self.plainTextEdit_8
 
+        self.editor.setWordWrapMode(QTextOption.NoWrap)
         self.highlighter = Highlighter(self.editor.document())
 
         self.editor.setContextMenuPolicy(Qt.CustomContextMenu)
@@ -780,9 +790,9 @@ class Application(QtWidgets.QMainWindow):
         self.cell_id_list = ['0']
         self.materials_name_list = []
         self.materials_id_list = []
-        self.lattice_id_list = ['0']
+        self.lattice_id_list = []
         self.lattice_name_list = []
-        self.universe_id_list = ['0']
+        self.universe_id_list = []
         self.universe_name_list = []
         self.Source_name_list = []
         self.Source_id_list = []
@@ -896,7 +906,6 @@ class Application(QtWidgets.QMainWindow):
         validate_script = openmc_path.replace('bin/openmc', 'bin/openmc-validate-xml')
         relaxng_dir = openmc_path.replace('bin/openmc', 'share/openmc/relaxng')
         cmd = validate_script + ' -i ' + str(self.directory) + ' -r ' + relaxng_dir
-        print(cmd)
         if self.plainTextEdit_1.toPlainText():
             stream = os.popen(cmd)
             document = stream.read()
@@ -1026,11 +1035,26 @@ class Application(QtWidgets.QMainWindow):
             self.showDialog('Warning', msg)
 
     def detect_component_id(self, line, key, ID):
+        import re
         item_id = line[line.find("(") + 1: line.find(")")].replace(' ', '').split(',')
         for w in item_id:
             if key in w and '=' in w:
                 try:
                     self.id = int(w.split('=')[1])
+                except:
+                    self.showDialog('Warning', 'Element id must be integer')
+                    return
+                break
+            elif key in w and '=' not in w:
+                try:
+                    self.id = int(re.search(r"(\d+)$", w).group())
+                except:
+                    self.showDialog('Warning', 'Element id must be integer')
+                    return
+                break    
+            elif key not in w and '=' not in w and w.isdigit():
+                try:
+                    self.id = int(w)
                 except:
                     self.showDialog('Warning', 'Element id must be integer')
                     return
@@ -1041,6 +1065,8 @@ class Application(QtWidgets.QMainWindow):
 
     def detect_components(self):
         import re
+        if not self.plainTextEdit_7.toPlainText().strip():
+            return
         Lists = [self.Model_Elements_List, self.Model_Nuclides_List, self.materials_name_list,
                 self.surface_name_list, self.cell_name_list, self.universe_name_list,
                 self.lattice_name_list, self.Source_name_list, self.Source_id_list,
@@ -1049,46 +1075,39 @@ class Application(QtWidgets.QMainWindow):
         for item in Lists:
             item.clear()
         self.materials_id_list = []
-        self.cell_id_list = ['0']
-        self.surface_id_list = ['0']
+        self.cell_id_list = []
+        self.surface_id_list = []
         self.universe_id_list = []
         self.cells_in_universes = []
-        self.lattice_id_list = ['0']
-        self.mesh_id_list = ['0']
-        self.filter_id_list = ['0']
-        self.tally_id_list = [0]
-        self.plot_id_list = ['0']
+        self.lattice_id_list = []
+        self.mesh_id_list = []
+        self.filter_id_list = []
+        self.tally_id_list = []
+        self.plot_id_list = []
         tally_filters_lines = []
+        tally_elements_lines = []
+        tally_nuclides_lines = []
         filter_bins_lines = []
         filters_list = []
         bins_list = []
+        Elements_In_Material = []
         lines = self.plainTextEdit_7.toPlainText().split('\n')
-
         for line in lines:
-
-            if 'openmc.Material' in line and 'openmc.Materials' not in line:
+            if 'openmc.Material' in line and 'openmc.Materials' not in line and 'Filter' not in line:
                 item = line.split('=')[0].replace(' ', '')
                 if item not in self.filter_name_list:
                     self.materials_name_list.append(item)
                     ID = len(self.materials_name_list)
                     self.detect_component_id(line, 'material_id', ID)
                     self.materials_id_list.append(self.id)
-            if 'openmc.Cell' in line:
+            elif 'openmc.Cell' in line and 'Filter' not in line:
                 item = line.split('=')[0].replace(' ', '')
                 if item not in self.filter_name_list:
                     self.cell_name_list.append(item)
                     ID = len(self.cell_name_list)
                     self.detect_component_id(line, 'cell_id', ID)
                     self.cell_id_list.append(self.id)
-            for key in self.Surfaces_key_list:
-                key = 'openmc.' + key
-                if key in line:
-                    item = line.split('=')[0]
-                    self.surface_name_list.append(item.replace(' ', ''))
-                    ID = len(self.surface_name_list)
-                    self.detect_component_id(line, 'surface_id', ID)
-                    self.surface_id_list.append(self.id)
-            if 'openmc.Universe' in line:
+            elif 'openmc.Universe' in line and 'Filter' not in line:
                 item = line.split('=')[0].replace(' ', '')
                 if item not in self.filter_name_list:
                     self.universe_name_list.append(item)
@@ -1096,60 +1115,78 @@ class Application(QtWidgets.QMainWindow):
                     self.detect_component_id(line, 'universe_id', ID)
                     self.universe_id_list.append(self.id)
                     #self.lattice_id_list.append(self.id)
-            if '.add_cells' in line:
+            elif '.add_cells' in line:
                 item = list(line.replace(' ', '').split('[')[1].split(']')[0].split(","))
                 self.cells_in_universes += item
-            if 'openmc.RectLattice' in line or 'openmc.HexLattice' in line:
-                item = line.split('=')[0]
-                self.lattice_name_list.append(item.replace(' ', ''))
+            elif 'openmc.RectLattice' in line :
+                item = line.split('=')[0].replace(' ', '')
+                self.lattice_name_list.append(item)
                 ID = len(self.lattice_name_list)
                 self.detect_component_id(line, 'lattice_id', ID)
                 self.lattice_id_list.append(self.id)
-                #self.universe_id_list.append(self.id)
-            if 'openmc.Source' in line:
-                item = line.split('=')[0]
-                self.Source_name_list.append(item.replace(' ', ''))
-            if 'openmc.RectilinearMesh' in line:
-                item = line.split('=')[0]
-                self.mesh_name_list.append(item.replace(' ', ''))
+            elif 'openmc.HexLattice' in line:
+                item = line.split('=')[0].replace(' ', '')
+                self.lattice_name_list.append(item)
+                ID = len(self.lattice_name_list)
+                self.detect_component_id(line, 'lattice_id', ID)
+                self.lattice_id_list.append(self.id)            
+            elif 'openmc.Source' in line:
+                item = line.split('=')[0].replace(' ', '')
+                self.Source_name_list.append(item)
+            elif 'openmc.RectilinearMesh' in line:
+                item = line.split('=')[0].replace(' ', '')
+                self.mesh_name_list.append(item)
                 ID = len(self.mesh_name_list)
                 self.detect_component_id(line, 'mesh_id', ID)
                 self.mesh_id_list.append(self.id)
-            if 'openmc.RegularMesh' in line:
-                item = line.split('=')[0]
-                self.mesh_name_list.append(item.replace(' ', ''))
+            elif 'openmc.RegularMesh' in line:
+                item = line.split('=')[0].replace(' ', '')
+                self.mesh_name_list.append(item)
                 ID = len(self.mesh_name_list)
                 self.detect_component_id(line, 'mesh_id', ID)
                 self.mesh_id_list.append(self.id)
-            if 'openmc.Plot' in line and 'openmc.Plots' not in line:
-                item = line.split('=')[0]
-                self.plot_name_list.append(item.replace(' ', ''))
+            elif 'openmc.Plot' in line and 'openmc.Plots' not in line:
+                item = line.split('=')[0].replace(' ', '')
+                self.plot_name_list.append(item)
                 ID = len(self.plot_name_list)
                 self.detect_component_id(line, 'plot_id', ID)
                 self.plot_id_list.append(self.id)
-            if 'openmc.Plots' in line:
-                item = line.split('=')[0]
-                self.plots_file_name = item.replace(' ', '')
-            for key in self.Filters_key_list:
-                key = 'openmc.' + key  
-                if key in line:
-                    item = line.split('=')[0]
-                    self.filter_name_list.append(item.replace(' ', ''))
-                    ID = len(self.filter_name_list)
-                    self.detect_component_id(line, 'filter_id', ID)
-                    self.filter_id_list.append(self.id)
-            if 'openmc.Tally' in line:
-                item = line.split('=')[0]
-                self.tally_name_list.append(item.replace(' ', ''))
+            elif 'openmc.Plots' in line:
+                item = line.split('=')[0].replace(' ', '')
+                self.plots_file_name = item
+            elif 'openmc.Tally' in line:
+                item = line.split('=')[0].replace(' ', '')
+                self.tally_name_list.append(item)
                 ID = len(self.tally_name_list)
                 self.detect_component_id(line, 'tally_id', ID)
                 self.tally_id_list.append(self.id)
                 self.filters[self.id] = []
-            if '.filters' in line:
+            elif '.filters' in line:
                 tally_filters_lines.append(line)
-            if 'openmc.' in line and 'Filter' in line:
+            elif 'openmc.' in line and 'Filter' in line:
                 filter_bins_lines.append(line)
-
+                for key in self.Filters_key_list:
+                        key = 'openmc.' + key  
+                        if key in line:
+                            item = line.split('=')[0].replace(' ', '')
+                            self.filter_name_list.append(item)
+                            ID = len(self.filter_name_list)
+                            self.detect_component_id(line, 'filter_id', ID)
+                            self.filter_id_list.append(self.id)
+                            break
+            elif 'add_element' in line or 'add_nuclide' in line:
+                tally_elements_lines.append(line)
+            else:
+                for key in self.Surfaces_key_list:
+                    key = 'openmc.' + key
+                    if key in line:
+                        item = line.split('=')[0].replace(' ', '')
+                        self.surface_name_list.append(item)
+                        ID = len(self.surface_name_list)
+                        self.detect_component_id(line, 'surface_id', ID)
+                        self.surface_id_list.append(self.id)
+                        break
+                
         # Fil filters dictionary for each tally id
         for line in tally_filters_lines:
             tally = line.split('.')[0]
@@ -1160,47 +1197,51 @@ class Application(QtWidgets.QMainWindow):
                 text = line.split('append')[1]
                 filters_list = text[text.find('(') + 1: text.find(')')].replace(' ', '').split(',')
             try:
-                id = self.tally_id_list[self.tally_name_list.index(tally) + 1]
+                id = self.tally_id_list[self.tally_name_list.index(tally)] # + 1]
             except:
                 return
             self.filters[id] += filters_list
         # fill bins dictionary for each filter
         for line in filter_bins_lines:
             text = line.replace(' ', '').split('=')
-            filter = text[0]
+            Filter_txt = text[0]
             text1 = text[1]
             if '[' in text1:
                 bins_list = text1[text1.find('[') + 1: text1.find(']')].replace(' ', '').split(',')
             else:
                 bins_list = text1[text1.find('(') + 1: text1.find(',')].replace(' ', '').split(',')
-            id = self.filter_id_list[self.filter_name_list.index(filter) + 1]
+            id = self.filter_id_list[self.filter_name_list.index(Filter_txt)] # + 1]
             self.Bins[id] = bins_list
-
-        for material in self.materials_name_list:
-            for line in lines:
-                if 'add_nuclide' in line:
-                    items = line[line.find("(") + 1: line.find(")")].replace(' ', '').split(',')
-                    Nuclide_In_Material = items[0]
-                    if Nuclide_In_Material.replace("'", "") not in self.Model_Nuclides_List:
-                        self.Model_Nuclides_List.append(Nuclide_In_Material.replace("'", ""))
-                if 'add_element' in line:
-                    items = line[line.find("(") + 1: line.find(")")].replace(' ', '').split(',')
-                    Element_In_Material = items[0]
-                    if Element_In_Material.replace("'", "") not in self.Model_Elements_List:
-                        self.Model_Elements_List.append(Element_In_Material.replace("'", ''))
-        self.Nuclides_In_Element(self.Model_Elements_List)   #  *****************
-
-        if self.surface_id_list:
-            self.surface_id_list.pop(0)
-        if self.cell_id_list:
-            self.cell_id_list.pop(0)
-        if self.lattice_id_list:
-            self.lattice_id_list.pop(0)
+        # fill list of nuclides and elements in the model
+        for line in tally_elements_lines:
+            if 'add_nuclide' in line:
+                line = line[line.find("(") + 1: line.find(")")]
+                line =[item.rstrip().lstrip() for item in list(filter(None, line.replace("'","").replace('"','').split(',')))]
+                try:
+                    for item in line:
+                        if item.isalnum() and 'wo' not in item and 'ao' not in item : Nuclide_In_Material = item   
+                    if Nuclide_In_Material not in self.Model_Nuclides_List:
+                        self.Model_Nuclides_List.append(Nuclide_In_Material)
+                except:
+                    pass
+            elif 'add_element' in line:
+                line = line[line.find("(") + 1: line.find(")")]
+                line = ''.join([i for i in line.replace('.', '').replace("'", "").replace('"','') if not i.isdigit()]).replace(' ', '')
+                line = list(filter(None, line.split(',')))
+                Elements_In_Material += [item for item in line if 'ao' not in item and 'wo' not in item and 'enrichment' not in item]
+                for elem in Elements_In_Material:   
+                    if elem not in self.Model_Elements_List:
+                        self.Model_Elements_List.append(elem) 
+                
+        if self.Model_Elements_List:
+            self.Nuclides_In_Element(self.Model_Elements_List)   
+        
+        self.Model_Nuclides_List = sorted(self.Model_Nuclides_List)
 
     def Nuclides_In_Element(self, Elements_list):
         import string
         for cle in src.materials.NATURAL_ABUNDANCE.keys():
-            if cle in self.Neutron_XS_List and cle.rstrip(string.digits) in Elements_list:
+            if cle in self.Neutron_XS_List and cle.rstrip(string.digits) in Elements_list and cle not in self.Model_Nuclides_List:
                     self.Model_Nuclides_List.append(cle)
 
     def Python_Materials(self):
@@ -1208,9 +1249,9 @@ class Application(QtWidgets.QMainWindow):
         function for exporting to material.xml file
         """    
         v_1 = self.plainTextEdit_7
-        self.detect_components()
+        #self.detect_components()
         if self.available_xs:
-            self.wind3 = ExportMaterials(v_1, self.available_xs, self.materials_name_list, self.materials_id_list, self.Model_Nuclides_List)
+            self.wind3 = ExportMaterials(v_1, self.available_xs, self.materials_name_list, self.materials_id_list)
             self.wind3.show()
         else:
             self.showDialog('Warning', 'Cross secions files not defined !')
@@ -1221,7 +1262,7 @@ class Application(QtWidgets.QMainWindow):
         function for exporting to geometry.xml file
         """
         v_1 = self.plainTextEdit_7
-        self.detect_components()
+        #self.detect_components()
         mat = self.materials_name_list
         mat_id = self.materials_id_list
         regions = self.regions
@@ -1243,7 +1284,7 @@ class Application(QtWidgets.QMainWindow):
         function for exporting to settings.xml file
         """     
         v_1 = self.plainTextEdit_7
-        self.detect_components()
+        #self.detect_components()
         self.wind5 = ExportSettings(v_1, self.directory, self.surface_name_list, self.surface_id_list, self.cell_name_list,
                                     self.materials_name_list, self.Vol_Calcs_list, self.Source_name_list,
                                     self.Source_id_list, self.Source_strength_list)
@@ -1256,7 +1297,7 @@ class Application(QtWidgets.QMainWindow):
         function for exporting to tallies.xml file
         """     
         v_1 = self.plainTextEdit_7
-        self.detect_components()
+        #self.detect_components()
         if self.available_xs:
             self.wind6 = ExportTallies(v_1, self.available_xs, self.tally_name_list, self.tally_id_list,
                                        self.filter_name_list, self.filter_id_list,
@@ -1277,7 +1318,7 @@ class Application(QtWidgets.QMainWindow):
         function for exporting to plots.xml file
         """     
         v_1 = self.plainTextEdit_7
-        self.detect_components()
+        #self.detect_components()
         self.wind7 = ExportPlots(v_1, self.plot_name_list, self.plot_id_list, self.plots_file_name)
         self.wind7.show()
         self.SaveFiles()
@@ -1332,14 +1373,12 @@ class Application(QtWidgets.QMainWindow):
                 return
             if image_list:
                 image_number = len(image_list)
-                print(image_number)
                 self.ImView = [""] * image_number
                 '''if self.which('eog'):
                     for i in range(image_number):
                         os.popen('eog ' + image_list[i])        # this could replace the above
                 else:'''
                 for i in range(image_number):
-                    print(i)
                     self.ImView[i] = QImageViewer(image_list[i]) 
                     self.ImView[i].show()            
             else:
@@ -1406,12 +1445,19 @@ class Application(QtWidgets.QMainWindow):
                 msg = 'Select your project directory first !!!!'
                 self.showDialog('Warning', msg)
         else:                                   #   python script
-            if self.plainTextEdit_7.toPlainText().strip() == "":
+            if not self.plainTextEdit_7.toPlainText().strip():
                 self.lineLabel1.setText("no Code to run!")
                 return
             else:
                 if self.filename:
                     for line in self.plainTextEdit_7.toPlainText().split():
+                        if self.openmc_version >= 141:
+                            if 'rectangular_prism' in line:
+                                self.showDialog('Warning', 'rectangular_prism must be replaced by RectangularPrism!')
+                                return
+                            if 'hexagonal_prism' in line:
+                                self.showDialog('Warning', 'hexagonal_prism must be replaced by HexagonalPrism!')
+                                return
                         if 'openmc.run()' in line and '#openmc.run()' not in line.strip():
                             run_openmc = True
                         if 'openmc.plot_geometry()' in line and '#openmc.plot_geometry()' not in line.strip():
@@ -1431,6 +1477,14 @@ class Application(QtWidgets.QMainWindow):
         self.checkbox.setChecked(True)
         run_openmc = False
         plot_openmc = False
+        for line in self.plainTextEdit_7.toPlainText().split():
+            if self.openmc_version >= 141:
+                if 'rectangular_prism' in line:
+                    self.showDialog('Warning', 'rectangular_prism must be replaced by RectangularPrism!')
+                    return
+                if 'hexagonal_prism' in line:
+                    self.showDialog('Warning', 'hexagonal_prism must be replaced by HexagonalPrism!')
+                    return        
         # Qprocess for shell_editor process
         #self.Process()
         self.process = QProcess(self)
@@ -1439,7 +1493,7 @@ class Application(QtWidgets.QMainWindow):
         self.process.started.connect(lambda: self.shellWin.insertPlainText("starting process\n"))
         self.process.finished.connect(lambda: self.shellWin.insertPlainText("process ended\n"))
 
-        if self.plainTextEdit_7.toPlainText().strip() == "":
+        if not self.plainTextEdit_7.toPlainText().strip():
             self.lineLabel1.setText("no Code to run!")
             return
         else:
@@ -1460,7 +1514,7 @@ class Application(QtWidgets.QMainWindow):
             else:
                 self.filename = "/tmp/tmp.py"
                 self.fileSave()
-                self.runPy3()
+                self.runPy3() 
         os.chdir(self.app_dir)
         
     def createGeom(self):  # modified to handle many plots
@@ -1479,8 +1533,11 @@ class Application(QtWidgets.QMainWindow):
                 self.showDialog('Warning', msg)
 
     def killPython(self):
-        if self.process:
-            self.process.kill()
+        try:
+            if self.process:
+                self.process.kill()
+        except:
+            self.showDialog('Warning', 'No process is running!')
 
     def handle_state(self, state):
         states = {
@@ -1579,7 +1636,7 @@ class Application(QtWidgets.QMainWindow):
             pass 
             
     def OpenFiles(self):
-        self.comboSize.setCurrentIndex(3)
+        #self.comboSize.setCurrentIndex(4)
         if self.tabWidget.currentWidget().objectName() == 'tab_run':
             msg = 'Select xml or python project tab first !'
             self.showDialog('Warning', msg)
@@ -1657,10 +1714,10 @@ class Application(QtWidgets.QMainWindow):
                     pass
                 self.tabWidget_3.setCurrentIndex(0)
         self.Update_StatusBar()
-        self.textSize(9)
+        self.textSize(float(self.comboSize.currentText()))
 
     def NewFiles(self):
-        self.comboSize.setCurrentIndex(3)
+        #self.comboSize.setCurrentIndex(4)
         self.shellWin.clear()
         if self.tabWidget.currentWidget().objectName() == 'tab_python':
             try:
@@ -1670,8 +1727,8 @@ class Application(QtWidgets.QMainWindow):
                     if ret == qm.Yes:
                         self.Close_Project()
                     elif ret == qm.No:
-                        return
-                elif self.plainTextEdit_7.toPlainText():
+                        return  
+                if self.plainTextEdit_7.toPlainText().strip():
                     qm = QMessageBox
                     ret = qm.question(self, 'Warning', 'Python script window is not empty! It will be cleared!')
                     if ret == qm.Yes:
@@ -1703,7 +1760,7 @@ class Application(QtWidgets.QMainWindow):
                     self.Close_Project()
                 elif ret == qm.No:
                     return
-            elif self.plainTextEdit_7.toPlainText():
+            elif self.plainTextEdit_7.toPlainText().strip():
                 qm = QMessageBox
                 ret = qm.question(self, 'Warning', 'Python script window is not empty! It will be cleared!')
                 if ret == qm.Yes:
@@ -1734,10 +1791,10 @@ class Application(QtWidgets.QMainWindow):
         else:
             msg = 'Select xml or python project to create first !'
             self.showDialog('Warning', msg)
-        self.textSize(9)
+        self.textSize(float(self.comboSize.currentText()))
 
     def SaveFiles(self):
-        #self.comboSize.setCurrentIndex(3)
+        #self.comboSize.setCurrentIndex(4)
         if self.tabWidget.currentWidget().objectName() == 'tab_xml':
             if self.new_File:
                 self.directory = self.wind.directory
@@ -1776,6 +1833,9 @@ class Application(QtWidgets.QMainWindow):
                     file.close()
                 else:
                     pass
+            else:
+                self.showDialog('Warning', 'No directory has been selected !')
+                return
 
         elif self.tabWidget.currentWidget().objectName() == 'tab_python':
             lines = self.plainTextEdit_7.toPlainText().split('\n')
@@ -1803,7 +1863,7 @@ class Application(QtWidgets.QMainWindow):
         self.textSize(float(self.comboSize.currentText()))
 
     def SaveAsFiles(self):
-        #self.comboSize.setCurrentIndex(3)
+        #self.comboSize.setCurrentIndex(4)
         if self.tabWidget.currentWidget().objectName() == 'tab_python':
             self.filename = QtWidgets.QFileDialog.getSaveFileName(self, 'Save as File', "Python Files (*.py);;All Files (*)")[0]
             if self.filename:
@@ -1859,7 +1919,7 @@ class Application(QtWidgets.QMainWindow):
 
     def fileSave(self):
         ### save File
-        self.comboSize.setCurrentIndex(3)
+        #self.comboSize.setCurrentIndex(4)
         if self.tabWidget.currentWidget().objectName() != 'tab_xml':
             if (self.filename != ""):
                 file = QFile(self.filename)
@@ -1879,13 +1939,13 @@ class Application(QtWidgets.QMainWindow):
                 self.editor.setFocus()
             else:
                 self.fileSaveAs()
-            self.textSize(9)
+            self.textSize(float(self.comboSize.currentText()))
         else:
-            self.textSize(9)
+            self.textSize(float(self.comboSize.currentText()))
             return
 
     def fileSaveAs(self):
-        self.comboSize.setCurrentIndex(3)
+        #self.comboSize.setCurrentIndex(4)
         if self.tabWidget.currentWidget().objectName() != 'tab_xml':
             fn, _ = QFileDialog.getSaveFileName(self, "Save as...", self.filename,
                                                 "Python files (*.py)")
@@ -1899,10 +1959,9 @@ class Application(QtWidgets.QMainWindow):
             self.filename = fn
             self.fname = QFileInfo(QFile(fn).fileName())
             return self.fileSave()
-            self.textSize(9)
         else:
-            self.textSize(9)
             return
+        self.textSize(float(self.comboSize.currentText()))
 
     def Close_Project(self):
         if self.tabWidget.currentWidget().objectName() == 'tab_python':   #   python script
@@ -1928,7 +1987,7 @@ class Application(QtWidgets.QMainWindow):
         self.plainTextEdit_6.clear()
         self.plainTextEdit_7.clear()
         self.plainTextEdit_8.clear()
-        self.comboSize.setCurrentIndex(3)
+        self.comboSize.setCurrentIndex(4)
 
     def question(self, alert, msg) : 
         qm = QMessageBox
@@ -1948,15 +2007,15 @@ class Application(QtWidgets.QMainWindow):
         title = "about ERSN-OpenMC-Py"
         message = """
                     <span style='color: #3465a4; font-size: 20pt;font-weight: bold;'>
-                    ERSN-OpenMC-Py v 1.0 </strong></span></p><h3>
+                    ERSN-OpenMC-Py v 1.2 </strong></span></p><h3>
 
                     <span style='color: #000000; font-size: 14pt;'>
                     created by 
-                    <a title='M. Lahdour & T. El Bardouni' href='https://github.com/tarekbardouni' target='_blank'>M. Lahdour & T. El Bardouni </a> <br><br>
+                    <a title='M. Lahdour & T. El Bardouni' href='https://github.com/mohamedlahdour' target='_blank'>M. Lahdour & T. El Bardouni </a> <br><br>
                     from University Abdelmalek Essaadi, 
                     Radiations and Nuclear Systems Laboratory ERSN, Tetouan, Morocco </strong></span></p><h3>
 
-                    ©2022 M. Lahdour & T. El Bardouni </strong></span></p>
+                    ©2024 M. Lahdour & T. El Bardouni </strong></span></p>
                         """
         QMessageBox(QMessageBox.Information, title, message, QMessageBox.NoButton, self,
                     Qt.Dialog | Qt.NoDropShadowWindowHint).show()
@@ -1971,9 +2030,11 @@ class Application(QtWidgets.QMainWindow):
                             <a title='T. El Bardouni' href='mailto:telbardouni@uae.ac.ma' target='_blank'>T. El Bardouni </a> <br><br>
                             <span style='color: #000000; font-size: 10pt;'>
                             University Abdelmalek Essaadi, 
-                            Radiations and Nuclear Systems Laboratory ERSN, Tetouan, Morocco </strong></span></p><h2>
+                            Radiations and Nuclear Systems Laboratory ERSN, Tetouan, Morocco</strong></span></p><h2>
+                            <a title:'Github repository' href='https://github.com/mohamedlahdour/ERSN-OpenMC-Py' target='_blank'>Github repository</a> <br><br> 
+                            <a title:'Readme' href='https://github.com/mohamedlahdour/ERSN-OpenMC-Py/blob/master/readme.txt' target='_blank'>Readme</a> <br><br> 
 
-                            ©2022 M. Lahdour & T. El Bardouni </strong></span></p>
+                            ©2024 M. Lahdour & T. El Bardouni </strong></span></p>
                                 """
         QMessageBox(QMessageBox.Information, title, message, QMessageBox.NoButton, self,
                     Qt.Dialog | Qt.NoDropShadowWindowHint).show()
@@ -2247,11 +2308,10 @@ class Application(QtWidgets.QMainWindow):
         self.shellWin.clear()
 
     def openRecentFile(self):
-        self.comboSize.setCurrentIndex(3)
+        #self.comboSize.setCurrentIndex(4)
         action = self.sender()
         if action:
             myfile = action.data()
-            print(myfile)
             if (self.maybeSave()):
                 if QFile.exists(myfile):
                     self.openFileOnStart(myfile)
@@ -2261,7 +2321,7 @@ class Application(QtWidgets.QMainWindow):
     ### New File
     def newFile(self):
         self.shellWin.clear()
-        self.comboSize.setCurrentIndex(3)
+        #self.comboSize.setCurrentIndex(4)
         if self.tabWidget.currentWidget().objectName() != 'tab_xml':
             self.openedFiles = True
             if self.maybeSave():
@@ -2275,11 +2335,11 @@ class Application(QtWidgets.QMainWindow):
                 self.setWindowTitle("new File[*]")
         else:
             return
-        self.textSize(9)
+        self.textSize(float(self.comboSize.currentText()))
 
     ### open File
     def openFileOnStart(self, path=None):
-        self.comboSize.setCurrentIndex(3)
+        #self.comboSize.setCurrentIndex(4)
         self.shellWin.clear()
         if self.tabWidget.currentWidget().objectName() != 'tab_xml':
             if path:
@@ -2309,7 +2369,7 @@ class Application(QtWidgets.QMainWindow):
                     QApplication.restoreOverrideCursor()
         else:
             return
-        self.textSize(9)
+        self.textSize(float(self.comboSize.currentText()))
 
     ### open File
     def openFile(self, path=None):
@@ -2326,7 +2386,7 @@ class Application(QtWidgets.QMainWindow):
             self.openedFiles = True
         else:
             return
-        self.textSize(9)
+        self.textSize(float(self.comboSize.currentText()))
 
     def exportPDF(self):
         if self.editor.toPlainText() == "":
@@ -2385,7 +2445,7 @@ class Application(QtWidgets.QMainWindow):
                     PyEdit Original Python Editor created by 
                     <a title='Axel Schneider' href='http://goodoldsongs.jimdo.com' target='_blank'>Axel Schneider</a> <br><br> </span></p><h3>
                     <span style='color: #3465a4; font-size: 9pt;'>
-                    ©2022 M. Lahdour & T. El Bardouni </strong></span></p>
+                    ©2024 M. Lahdour & T. El Bardouni </strong></span></p>
                         """
         self.infobox(title, message)
 
@@ -2413,14 +2473,14 @@ class Application(QtWidgets.QMainWindow):
     def commentLine(self):
         newline = u"\u2029"
         comment = "#"
-        list = []
+        List = []
         ot = self.editor.textCursor().selectedText()
         if not self.editor.textCursor().selectedText() == "":
             ### multiple lines selected
             theList = ot.splitlines()
             linecount = ot.count(newline)
             for i in range(linecount + 1):
-                list.insert(i, comment + theList[i])
+                List.insert(i, comment + theList[i])
             self.editor.textCursor().insertText(newline.join(list))
             self.setModified(True)
             self.lineLabel1.setText("added comment")
@@ -2432,14 +2492,14 @@ class Application(QtWidgets.QMainWindow):
     def uncommentLine(self):
         comment = "#"
         newline = u"\u2029"
-        list = []
+        List = []
         ot = self.editor.textCursor().selectedText()
         if not self.editor.textCursor().selectedText() == "":
             ### multiple lines selected
             theList = ot.splitlines()
             linecount = ot.count(newline)
             for i in range(linecount + 1):
-                list.insert(i, (theList[i]).replace(comment, "", 1))
+                List.insert(i, (theList[i]).replace(comment, "", 1))
             self.editor.textCursor().insertText(newline.join(list))
             self.setModified(True)
             self.lineLabel1.setText("comment removed")
@@ -2767,7 +2827,7 @@ class Application(QtWidgets.QMainWindow):
     #######################################################################################
     #######################################################################################
 
-version = '1.1'
+version = '1.2'
 qapp = QApplication(sys.argv)  
 app  = Application(u'ERSN-OpenMC-Py')
 qapp.setStyleSheet("QPushButton { background-color: palegoldenrod; border-width: 2px; border-color: darkkhaki}"

@@ -647,7 +647,7 @@ class InstallOpenMC(QtWidgets.QMainWindow):
             self.script_exec('bash bash_scripts/openmc-conda-install.sh ' + OPTIONS)
 
     def update_conda_options(self):
-        global INSTALL_MINICONDA, UPDATE_CONDA, CHECKSUM, CONDA_MD5, CONDA_URL
+        global INSTALL_MINICONDA, UPDATE_CONDA, CHECKSUM, CONDA_MD5, CONDA_URL, SH_SCRIPT
         if self.rB_yes_conda.isChecked():
             INSTALL_MINICONDA = 'yes'
         else:
@@ -663,8 +663,10 @@ class InstallOpenMC(QtWidgets.QMainWindow):
         CONDA_MD5 = self.lineEdit_SHA256.text()
         if self.rB_CONDA_URL.isChecked():
             CONDA_URL = url1
+            SH_SCRIPT = 'Miniconda3-latest-Linux-x86_64.sh'
         elif self.rB_MIRROR_URL.isChecked():
             CONDA_URL = url2
+            SH_SCRIPT = 'Miniconda3-py311_23.10.0-1-Linux-x86_64.sh'
 
     def update_openmc_options(self):
         # update of OpenMC installation options
@@ -941,7 +943,7 @@ SH_SCRIPT = 'Miniconda3-latest-Linux-x86_64.sh'
 CONDA_MD5 = "c9ae82568e9665b1105117b4b1e499607d2a920f0aea6f94410e417a0eff1b9c"
 CONDA_MD5_IN = CONDA_MD5
 url1 = 'https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh'
-url2 = 'https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh'
+url2 = 'https://repo.anaconda.com/miniconda/Miniconda3-py39_23.10.0-1-Linux-x86_64.sh'
 CONDA_URL = url1
 miniconda = QDir.homePath() + '/miniconda3/bin/conda'
 
@@ -971,7 +973,7 @@ line = '~' * 70
 
 
 #  to be removed if called by gui.py
-'''qapp = QApplication(sys.argv)
+qapp = QApplication(sys.argv)
 mainwindow = InstallOpenMC()
 mainwindow.show()
-sys.exit(qapp.exec_())'''
+sys.exit(qapp.exec_())
